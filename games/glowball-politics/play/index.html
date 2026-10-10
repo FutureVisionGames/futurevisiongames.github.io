@@ -1,0 +1,1543 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}</style></head><body>
+<title>Glowball Politics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* Amiga cabinet: bevelled grey metal panels, blue CRT portrait windows, gold pixel labels, green bevel logo */
+:root{
+  --bg:#1c1e23; --metal:#5c5f66; --metal-hi:#9a9ea8; --metal-lo:#2c2e34; --plate:#4a4d54;
+  --win:#4a5ec0; --win-deep:#2a3680; --ink:#eceef3; --muted:#b4b9c4; --gold:#f4d34a;
+  --glow:#3ee07a; --glow-deep:#0f5a2a; --danger:#ff6a55; --screen:#111317;
+  --display:'Silkscreen',ui-monospace,Menlo,monospace; --body:'VT323',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{min-height:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);background-image:radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px);background-size:4px 4px;color:var(--ink);font-family:var(--body);font-size:20px;line-height:1.2}
+#app{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:14px 48px;display:flex;flex-direction:column;gap:14px}
+.bevel{background:var(--metal);border:3px solid;border-color:var(--metal-hi) var(--metal-lo) var(--metal-lo) var(--metal-hi)}
+.sunk{background:var(--screen);border:3px solid;border-color:var(--metal-lo) var(--metal-hi) var(--metal-hi) var(--metal-lo)}
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+.logo{margin:0;font-family:var(--display);font-weight:700;color:var(--glow);font-size:clamp(26px,5.6vw,58px);line-height:.95;letter-spacing:.01em;text-shadow:-1px -1px 0 #a0ffc0,3px 3px 0 var(--glow-deep),6px 6px 0 #000;text-wrap:balance}
+.copy{font-family:var(--display);font-size:11px;color:var(--gold);letter-spacing:.08em;margin-top:8px}
+.tools{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font-family:var(--display);font-size:12px;color:var(--ink);background:var(--metal);border:3px solid;border-color:var(--metal-hi) var(--metal-lo) var(--metal-lo) var(--metal-hi);padding:8px 10px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;line-height:1.2}
+.btn:hover:not(:disabled){background:#686c74}
+.btn:active:not(:disabled),.btn.on{border-color:var(--metal-lo) var(--metal-hi) var(--metal-hi) var(--metal-lo);background:var(--plate);color:var(--gold)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn:focus-visible,.pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.btn.go{background:#1f7a3e;color:#fff}.btn.go:hover:not(:disabled){background:#27924b}
+.btn.red{background:#8a2a22;color:#fff}.btn.red:hover:not(:disabled){background:#a3332a}
+.btn.nuke{background:#b01818;color:#fff;border-color:#ff8a7a #4a0808 #4a0808 #ff8a7a;text-shadow:1px 1px 0 #400}
+.btn.nuke:hover:not(:disabled){background:#d02020}
+.btn.nuke.on{background:#600;color:var(--gold);border-color:#4a0808 #ff8a7a #ff8a7a #4a0808}
+.win{background:var(--win);border:4px solid #a3a7b0;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 2px var(--win-deep)}
+canvas.px{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+.label{font-family:var(--display);font-size:11px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase}
+
+/* title */
+.intro{padding:16px;display:flex;flex-direction:column;gap:14px}
+.intro p{margin:0;max-width:64ch}
+.cast{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px}
+.pick{background:none;border:0;padding:0;cursor:pointer;text-align:center;color:inherit;display:flex;flex-direction:column;gap:6px}
+.pick .win canvas{width:100%;height:auto;aspect-ratio:1}
+.pick .nm{font-family:var(--display);color:var(--gold);font-size:11px;line-height:1.3}
+.pick .co{font-family:var(--display);font-size:10px;color:var(--muted)}
+.pick[aria-pressed="true"] .win{border-color:var(--gold);box-shadow:inset 0 0 0 2px var(--win-deep),0 0 0 3px var(--gold)}
+.brief{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px}
+.brief h2{margin:0 0 4px;font-family:var(--display);font-size:16px;color:var(--gold);font-weight:700}
+.brief p{margin:0;max-width:62ch}
+.brief .q{color:var(--glow)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 18px;padding:12px 14px;font-size:19px}
+.rules b{font-family:var(--display);font-size:11px;color:var(--gold);font-weight:400;display:block;letter-spacing:.08em}
+
+/* game: one-screen cabinet, leaders flank the map like the original's portrait wall */
+#app.ingame{height:100dvh;box-sizing:border-box;padding-block:8px;gap:8px}
+#app.ingame header.top{padding:6px 12px}
+#app.ingame .logo{font-size:22px;text-shadow:2px 2px 0 var(--glow-deep),3px 3px 0 #000}
+#app.ingame .logo br{display:none}
+#app.ingame .copy{display:none}
+#app.ingame .tools .btn{padding:6px 8px;font-size:11px}
+#scrGame{flex:1;min-height:0;display:grid;grid-template-columns:clamp(150px,18vw,236px) minmax(0,1fr) clamp(150px,18vw,236px);gap:8px}
+.side{display:flex;flex-direction:column;gap:8px;min-height:0}
+.center{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+.card{flex:1;min-height:0;display:flex;flex-direction:column;gap:3px;padding:6px;background:var(--metal);border:3px solid;border-color:var(--metal-hi) var(--metal-lo) var(--metal-lo) var(--metal-hi);cursor:default}
+.card.me{border-color:var(--gold)}
+.card.talk{outline:2px solid var(--glow);outline-offset:-1px}
+.card.pickable{cursor:crosshair}.card.pickable:hover{background:#6a6e76}
+.card.chosen{outline:3px solid var(--danger);outline-offset:-2px}
+.card .pw{flex:1;min-height:34px;container-type:size;display:flex;justify-content:center;align-items:center}
+.card canvas{width:min(100cqw,100cqh);height:min(100cqw,100cqh);background:var(--win);border:4px solid #a3a7b0;border-radius:12px;box-sizing:border-box}
+.card.dead canvas{filter:grayscale(1) brightness(.5)}
+.card.dead .rn{text-decoration:line-through;color:#9aa0aa}
+.card .ld{display:none}
+.card .pw{min-height:60px}
+.card .st{font-size:14px;line-height:1.05;gap:0 5px}
+.card{padding:5px 6px;gap:2px}
+.log.mini{flex:.8;min-height:60px;max-height:none;font-size:15px;padding:6px 8px}
+.mapwrap{flex:1;min-height:0;padding:6px;container-type:size;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.mapbox{position:relative;width:min(100cqw,200cqh);transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+#map{width:100%;height:auto;aspect-ratio:2/1}
+#tags,#floaters{position:absolute;inset:0;pointer-events:none}
+.tag{position:absolute;font-family:var(--display);font-size:10px;line-height:1.15;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;white-space:nowrap;pointer-events:none;text-align:center}
+.tag i{font-style:normal;color:var(--gold)}
+.tag.dead{color:#8a8e98;text-decoration:line-through}
+.tag.b{transform:translate(-50%,7px)}.tag.t{transform:translate(-50%,calc(-100% - 7px))}
+.tag.l{transform:translate(calc(-100% - 8px),-40%);text-align:right}.tag.r{transform:translate(8px,-50%);text-align:left}
+.floater{position:absolute;font-family:var(--display);font-weight:700;font-size:clamp(10px,1.4vw,15px);white-space:nowrap;text-shadow:2px 2px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;animation:floatUp 1.9s ease-out forwards;z-index:2}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,-40%) scale(.6)}12%{opacity:1;transform:translate(-50%,-70%) scale(1.25)}25%{transform:translate(-50%,-80%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-300%)}}
+#banner{position:absolute;left:50%;top:12%;transform:translateX(-50%);font-family:var(--display);font-weight:700;font-size:clamp(16px,3.4vw,32px);color:var(--gold);background:rgba(10,10,14,.85);padding:8px 16px;border:3px solid var(--gold);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .25s;z-index:3}
+#banner.show{opacity:1}
+#banner.red{color:#fff;background:rgba(150,16,16,.9);border-color:#ff8a7a}
+.shake{animation:shake .35s}
+.shake2{animation:shake2 .7s}
+@keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-4px,2px)}50%{transform:translate(3px,-3px)}75%{transform:translate(-2px,1px)}}
+@keyframes shake2{0%,100%{transform:translate(0)}10%{transform:translate(-9px,4px)}25%{transform:translate(8px,-6px)}40%{transform:translate(-7px,-3px)}55%{transform:translate(6px,5px)}70%{transform:translate(-3px,2px)}85%{transform:translate(2px,-2px)}}
+.rn{font-family:var(--display);font-size:10px;color:var(--ink);letter-spacing:.04em}
+.you,.ally{font-family:var(--display);font-size:9px;padding:1px 4px;margin-left:4px}
+.you{color:#111;background:var(--gold)}
+.ally{color:#06240f;background:var(--glow)}
+.ld{font-size:16px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:5px;background:#2a2c31;margin:2px 0}
+.bar i{display:block;height:100%;background:var(--glow);transition:width .5s}
+.st{font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;flex-wrap:wrap;gap:0 6px}
+.st b{color:var(--ink);font-weight:400}
+.dialog{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:6px 10px;cursor:pointer;flex:none;user-select:none}
+.dialog canvas{width:72px;height:72px;background:var(--win);border:3px solid #a3a7b0;border-radius:10px}
+#dlgName{font-family:var(--display);font-size:11px;color:var(--gold);letter-spacing:.05em}
+#dlgText{font-size:22px;line-height:1.1;min-height:2.2em;margin-top:2px}
+#dlgMore{font-family:var(--display);font-size:10px;color:var(--glow);animation:blink .9s steps(2) infinite;margin-left:6px;white-space:nowrap}
+@keyframes blink{50%{opacity:0}}
+#dlgChoices{display:flex;gap:6px;flex-wrap:wrap}
+#dlgChoices:not(:empty){margin-top:4px}
+.command{display:flex;flex-direction:column;gap:6px;padding:8px 10px;flex:none}
+.cmdtop{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;align-items:baseline}
+.cmdrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.btn.super{background:#5e30a0;color:#fff;border-color:#b890f0 #1a0a30 #1a0a30 #b890f0}
+.btn.super:hover:not(:disabled){background:#7440c0}
+.command .btn{font-size:11px;padding:5px 6px}
+.targets{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+.order{font-size:19px;color:var(--gold)}
+.turn{font-family:var(--display);font-size:10px;color:var(--glow);letter-spacing:.08em}
+.log{max-height:190px;overflow:auto;font-size:18px;padding:8px 12px}
+.log div{padding:1px 0}
+.log .war{color:var(--gold)}.log .hit{color:var(--danger)}.log .dead{color:#9aa0aa}.log .ufo{color:#a8f070}.log .pact{color:var(--glow)}
+/* end */
+.endwrap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;padding:18px}
+.endwrap .win canvas{width:180px;height:180px}
+.endwrap h2{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(22px,4vw,40px);color:var(--glow);text-shadow:3px 3px 0 var(--glow-deep),5px 5px 0 #000;text-wrap:balance}
+.endwrap .fine{font-family:var(--display);font-size:10px;color:var(--muted);margin-top:4px}
+.endwrap p{margin:8px 0 0;max-width:60ch;font-size:22px}
+.endwrap blockquote{margin:10px 0 0;color:var(--gold);font-size:24px}
+/* mod kit */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:flex-start;justify-content:center;padding:20px 16px;overflow:auto;z-index:10}
+.modpanel{width:100%;max-width:760px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.modpanel h2{margin:0;font-family:var(--display);color:var(--gold);font-size:16px}
+.modpanel p{margin:0;font-size:18px;color:var(--muted)}
+.modrow{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--plate);padding:6px;border:2px solid var(--metal-lo)}
+.modrow canvas{width:48px;height:48px}
+.modrow input[type=text]{font-family:var(--body);font-size:19px;background:var(--screen);color:var(--ink);border:2px solid var(--metal-lo);padding:3px 6px;min-width:0;width:100%}
+.modrow .fbtn{display:flex;gap:6px;flex-wrap:wrap}
+.filelbl{position:relative;overflow:hidden}
+.filelbl input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.mapwrap.alert{box-shadow:inset 0 0 0 4px #ff2020;animation:alert .5s steps(2) infinite}
+@keyframes alert{50%{box-shadow:inset 0 0 0 4px #500}}
+.floater.comic{font-size:clamp(15px,2.6vw,30px);color:#fff200;text-shadow:3px 3px 0 #c01010,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000;animation-name:comic}
+.floater.huge{font-size:clamp(20px,4.2vw,48px)}
+@keyframes comic{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-14deg)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.45) rotate(6deg)}30%{transform:translate(-50%,-50%) scale(1) rotate(-4deg)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-110%) scale(1.1) rotate(-4deg)}}
+#cutin{position:absolute;inset:0;pointer-events:none;z-index:4;display:flex;align-items:center;overflow:hidden}
+.ci{display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 22px;width:100%;box-sizing:border-box;background:repeating-linear-gradient(-45deg,#b01818 0 14px,#8a1010 14px 28px);border-block:4px solid #fff200;animation:ciIn 1.9s ease-in-out forwards}
+.ci.gold{background:repeating-linear-gradient(-45deg,#1f7a3e 0 14px,#16602f 14px 28px)}
+.ci.purple{background:repeating-linear-gradient(-45deg,#5e30a0 0 14px,#3a1a6a 14px 28px)}
+.ci.dark{background:repeating-linear-gradient(-45deg,#2a2c31 0 14px,#16171b 14px 28px);border-color:#ff6a55}
+.ci.alien{background:repeating-linear-gradient(-45deg,#1a5a1a 0 14px,#0a2a0a 14px 28px);border-color:#a8f070}
+.ci canvas{width:clamp(52px,8vw,92px);height:auto;aspect-ratio:1;border:3px solid #fff;border-radius:8px;background:var(--win)}
+.ci .ct{font-family:var(--display);font-weight:700;font-size:clamp(18px,3.6vw,40px);color:#fff200;text-shadow:3px 3px 0 #000;line-height:1}
+.ci .cs{font-family:var(--body);font-size:clamp(15px,1.8vw,23px);color:#fff;margin-top:4px}
+@keyframes ciIn{0%{transform:skewY(-4deg) translateX(-110%)}14%{transform:skewY(-4deg) translateX(0)}86%{transform:skewY(-4deg) translateX(0);opacity:1}100%{transform:skewY(-4deg) translateX(110%);opacity:0}}
+.bigbtn{width:clamp(38px,5.5vw,64px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff9090,#d01010 60%,#600);border:4px solid #333;box-shadow:0 7px 0 #222;animation:press 1.9s forwards;flex:none}
+@keyframes press{0%,42%{transform:translateY(0);box-shadow:0 7px 0 #222}52%,100%{transform:translateY(6px);box-shadow:0 1px 0 #222}}
+.card.ouch{animation:shake .45s}
+#ticker{position:absolute;left:6px;right:6px;bottom:6px;height:22px;display:flex;background:rgba(8,8,18,.9);border-top:2px solid var(--gold);color:#fff;pointer-events:none;z-index:3;overflow:hidden}
+#ticker b{font-family:var(--display);font-size:10px;background:#c01010;color:#fff;padding:0 8px;display:flex;align-items:center;flex:none;letter-spacing:.08em}
+#ticker .tk{flex:1;overflow:hidden;white-space:nowrap;line-height:20px;font-size:18px}
+#tkText{display:inline-block;padding-left:100%;animation:tick 40s linear infinite}
+@keyframes tick{to{transform:translateX(-100%)}}
+#incoming{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:4;pointer-events:none;font-family:var(--display);font-weight:700;font-size:clamp(11px,1.5vw,16px);color:#fff;background:#b01010;border:3px solid #fff200;padding:6px 12px;white-space:nowrap;animation:blink .5s steps(2) infinite}
+.mapwrap.incoming,.mapwrap.incoming canvas{cursor:crosshair}
+.mapwrap.incoming{box-shadow:inset 0 0 0 4px #ff2020}
+.ci.newsci{background:repeating-linear-gradient(-45deg,#1e3a8a 0 14px,#16306e 14px 28px)}
+#crt{position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.26) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.6) 100%);animation:flick .14s steps(2) infinite}
+@keyframes flick{50%{opacity:.9}}
+body.crt #app{filter:contrast(1.1) saturate(1.3) brightness(1.05)}
+body.crt .logo{text-shadow:-2px 0 0 rgba(255,0,80,.6),2px 0 0 rgba(0,200,255,.6),3px 3px 0 var(--glow-deep)}
+@media (prefers-reduced-motion:reduce){#crt,#tkText,#incoming{animation:none}}
+@media (max-width:760px){
+ #app.ingame{height:auto}
+ #scrGame{display:flex;flex-direction:column}
+ .side{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+ #sideR .log.mini{grid-column:1/-1;min-height:90px;max-height:140px}
+ .card .pw{flex:none;height:64px}
+ .card .st{display:none}
+ .mapwrap{flex:none;container-type:inline-size}.mapbox{width:100%}
+ #sideR{order:3}.center{order:2}#sideL{order:1}
+}
+@media (max-width:560px){.brief{grid-template-columns:1fr}.endwrap{grid-template-columns:1fr}.modrow{grid-template-columns:52px minmax(0,1fr)}.modrow .fbtn{grid-column:1/-1}#dlgText{font-size:19px}.card .ld{display:none}.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.dialog canvas{width:56px;height:56px}}
+@media (prefers-reduced-motion:reduce){.shake,.shake2{animation:none}.bar i{transition:none}}
+</style>
+
+<div id="crt" hidden></div>
+<div id="app">
+  <header class="top bevel">
+    <div>
+      <h1 class="logo">GLOWBALL <br>POLITICS</h1>
+      <div class="copy">© 2026 INVENTED WORLD COMPUTING · NOT A REAL WORLD</div>
+    </div>
+    <div class="tools">
+      <button class="btn" id="btnFast" aria-pressed="false">Fast: off</button>
+      <button class="btn on" id="btnSound" aria-pressed="true">Sound: on</button>
+      <button class="btn on" id="btnMusic" aria-pressed="true">Music: on</button>
+      <button class="btn" id="btnCrt" aria-pressed="false">CRT: off</button>
+      <button class="btn" id="btnMod">Mod kit</button>
+      <button class="btn red" id="btnQuit" hidden>Quit</button>
+    </div>
+  </header>
+
+  <!-- TITLE / SELECT -->
+  <section id="scrTitle" class="intro bevel">
+    <div class="label">Choose your leader</div>
+    <div class="cast" id="cast"></div>
+    <div class="brief sunk" id="brief">
+      <div><h2 id="bName"></h2><p id="bBio"></p><p class="q" id="bQuirk"></p></div>
+      <button class="btn go" id="btnStart">Start the war (politely)</button>
+    </div>
+    <div class="rules sunk">
+      <div><b>Goal</b>Be the last nation standing. The game only ends when one country is left. If you get vaporized, you watch the rest.</div>
+      <div><b>Peace, then war</b>The first 3 turns are peacetime (DEFCON 5 to 3): build, ally, propagandize and spy. Then the world war starts and the weapons unlock.</div>
+      <div><b>Each turn</b>Pick one order. Everyone acts at once: defenses first, then building and diplomacy, propaganda, then strikes.</div>
+      <div><b>Weapons</b>A missile carries your biggest warhead. Bombers burn 2 oil. The red NUKE button fires every missile you own at once.</div>
+      <div><b>Alliances</b>Propose a pact with Ally. Allies join your attacks and may avenge you. Hitting an ally is a betrayal.</div>
+      <div><b>Sabotage</b>Send a spy (or a man in a cardboard box) to blow up silos, torch oil, hack teleprompters or swap warheads for confetti. Spies get caught sometimes.</div>
+      <div><b>Oil</b>Every nation burns 1 barrel a turn. Run dry and the fuel riots start.</div>
+      <div><b>Shoot them down</b>When missiles fly at you, the action slows down. Click the incoming missiles on the map to fire interceptors. Each shot uses one defense.</div>
+      <div><b>Super-weapons</b>After 300 megatons, every nation unlocks one absurd super-weapon: an orbital magnifying glass, a giant robot or a cow catapult.</div>
+      <div><b>Watch the skies</b>The Galactic Homeowners Association may confiscate missiles or zap whoever is being loudest.</div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="scrGame" hidden>
+    <aside class="side" id="sideL" aria-label="Nations, west"></aside>
+    <div class="center">
+      <div class="mapwrap bevel" id="mapwrap">
+        <div class="mapbox">
+          <canvas id="map" class="px" width="320" height="160" aria-label="World map"></canvas>
+          <div id="tags"></div>
+          <div id="floaters"></div>
+          <div id="banner"></div>
+        </div>
+        <div id="cutin"></div>
+        <div id="incoming" hidden></div>
+        <div id="ticker"><b>GNN</b><div class="tk"><span id="tkText">GLOBAL NEWS NETWORK · ALL THE NEWS THAT'S FIT TO FLATTEN</span></div></div>
+      </div>
+      <div class="dialog bevel" id="dialog" title="Click to continue">
+        <canvas id="dlgCv" class="px" width="72" height="72"></canvas>
+        <div style="min-width:0">
+          <div id="dlgName">WORLD NEWS</div>
+          <div><span id="dlgText">Seven leaders. One planet. Nobody has pressed anything yet.</span><span id="dlgMore" hidden>▸ CLICK</span></div>
+          <div id="dlgChoices"></div>
+        </div>
+      </div>
+      <div class="command bevel">
+        <div class="cmdtop"><span class="turn" id="turnInfo"></span><span class="order" id="orderTxt"></span></div>
+        <div class="actions" id="actions">
+          <button class="btn" data-act="build">Build</button>
+          <button class="btn" data-act="defend">Defend</button>
+          <button class="btn" data-act="drill">Drill oil</button>
+          <button class="btn" data-act="propaganda">Propaganda ▸</button>
+          <button class="btn" data-act="ally">Ally ▸</button>
+          <button class="btn" data-act="sabotage">Sabotage ▸</button>
+          <button class="btn" data-act="missile">Missile ▸</button>
+          <button class="btn" data-act="bomber">Bomber ▸</button>
+          <button class="btn nuke" data-act="nuke">NUKE ▸</button>
+          <button class="btn super" data-act="super">SUPER ▸</button>
+        </div>
+        <div class="cmdrow">
+          <span class="label">Target</span>
+          <div class="targets" id="targets"></div>
+          <button class="btn go" id="btnEnd" disabled>End turn</button>
+        </div>
+      </div>
+    </div>
+    <aside class="side" id="sideR" aria-label="Nations, east">
+      <div class="log sunk mini" id="log" aria-live="polite"></div>
+    </aside>
+  </section>
+
+  <!-- END -->
+  <section id="scrEnd" class="bevel" hidden>
+    <div class="endwrap">
+      <div class="win"><canvas id="endCv" class="px" width="72" height="72"></canvas></div>
+      <div>
+        <h2 id="endHead"></h2>
+        <div class="fine" id="endFine"></div>
+        <p id="endText"></p>
+        <blockquote id="endQuote"></blockquote>
+        <p id="endStats" style="color:var(--muted);font-size:19px"></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+          <button class="btn go" id="btnAgain">Play again</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOD KIT -->
+  <div class="modal" id="modal" hidden>
+    <div class="modpanel bevel" role="dialog" aria-labelledby="modTitle">
+      <h2 id="modTitle">MOD KIT</h2>
+      <p>Rename any leader or nation and load your own portrait image. Every dialogue line lives in the LEADERS table at the top of this page's script, ready for your own jokes.</p>
+      <div id="modRows" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn go" id="btnModDone">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   LEADERS — edit names, stats and every line of dialogue here.
+   {t} in a line is replaced with the other nation's name.
+   ===================================================================== */
+const LEADERS = [
+ { key:'america', nation:'America', leader:'Judge Dee Megaton', art:'dee', color:'#e04040', pos:[62,50], lab:'b', spread:[[-9,-3],[7,-5],[0,6]], rigs:1,
+   bio:'A former TV-courtroom judge who governs by gavel. Every decree is "Sustained!" and every war comes with a commercial break.',
+   quirk:'Bombers are harder to shoot down.',
+   start:{pop:110,oil:6,missiles:3,warheads:[20,50,20],bombers:2,abm:1}, aggr:.55,
+   lines:{
+    build:['Order! Order more missiles!','The court rules in favor of more rockets. Sustained!','New weapons, paid for by my line of gavel-shaped air fresheners.'],
+    defense:['Objection! To being exploded.','Defenses up. Bailiff, stand in front of the big one.'],
+    propaganda:['{t}, your citizens have been served. Free cable and a studio audience await.','Come to America, {t}! We have 74 flavors of cheese in a can.'],
+    launch:['The court finds {t} GUILTY. Sentence: one warhead. We\'ll be right back after these messages.','Case dismissed. So is {t}\'s coastline.','{t}, you have the right to remain radioactive.'],
+    hit:['Objection! That was my good city!','Bailiff! Somebody nuked the bailiff!','Order in the court! And in the crater!'],
+    block:['Overruled! Missile dismissed with prejudice.','Denied! Try again, and wear a tie this time.'],
+    oil:['We\'re drilling. Under the courthouse. Under the parking lot. Under Gary.','Found oil in the jury box. Juror 9 is thrilled.'],
+    ally:['{t}, let\'s form a partnership. Like a TV judge and a studio audience. You clap, I win.','Team up with me, {t}. I\'ll let you sit in the jury box. The good chair.'],
+    accept:['The court accepts! Bailiff, bring the friendship gavel.','Sustained! We are now legally best friends.'],
+    decline:['Overruled. I don\'t team up with defendants.','Denied! You\'re in contempt of friendship.'],
+    teamup:['Joining my ally! The court finds {t} double guilty!','Tag-team justice, {t}! Two gavels!'],
+    betray:['Our friendship has been overturned on appeal, {t}.'],
+    nuke:['This is my BIG gavel, {t}. Court is in session. PERMANENTLY.','Everything we\'ve got at {t}! Commercial break after!'],
+    ufo:['Objection! Those aliens did not have a permit!'],
+    sabotage:['Sending in my bailiff. Undercover. He is wearing a fake mustache over his real mustache.','Covert operation on {t}. Code name: Objection.'],sabotaged:['Who put a whoopee cushion in my missile silo?!','Somebody rewired my gavel! It just plays elevator music now!'],caught:['That man is not my spy. He is a tourist. With a parachute. And a grappling hook.'],
+    win:['Final verdict: I win. Court is adjourned. Forever.'],
+    lose:['Mistrial! MISTRIAL!!!']}},
+ { key:'russia', nation:'Russia', leader:'President Samovarov', art:'samo', color:'#c89a30', pos:[218,28], lab:'t', spread:[[-14,-2],[10,-4],[-2,5]], rigs:1,
+   bio:'Desperately wants to be crowned tsar. The only crown the budget allowed is a brass samovar.',
+   quirk:'Propaganda steals 50% more people. Drilling pumps 4 oil.',
+   start:{pop:100,oil:9,missiles:3,warheads:[20,50,20],bombers:1,abm:1}, aggr:.6,
+   lines:{
+    build:['New missiles! Also a small tea kettle. For morale.','Factory makes one missile, one tractor. Tractor is also missile.'],
+    defense:['Is not bunker. Is very deep, very private tea room.','We build shield. It is shaped like a samovar. Everything is.'],
+    propaganda:['{t}, come to Russia! We have cold, more cold, and the tea!','Your people are historically my people, {t}. I checked the history. I wrote it.'],
+    launch:['I am not attacking {t}. I am doing special delivery. Of very hot soup.','{t} was always part of my ancestral kettle.','Pour the tea. Press the button. Is same motion.'],
+    hit:['My samovar! It is dented! This means war. Oh wait. Already war.','You spilled my tea. Unforgivable.'],
+    block:['Ha! Missile caught. Now it is tea kettle.','Our shield works! Mostly by accident, but works!'],
+    oil:['We have oil. We have gas. We have oil pretending to be gas. Very flexible.','Pipeline open. Please pay in hats.'],
+    ally:['{t}, be my friend. We share tea. You bring cups, I bring kettle, kettle is in charge.','Alliance, {t}? I promise not to annex you. This week.'],
+    accept:['Friendship! Is like tea. Very hot, could burn you.','Da! We are now brothers. I am big brother.'],
+    decline:['No. Your cups are too small.','I decline. My kettle does not trust you.'],
+    teamup:['I join my friend! {t}, you get tea also. Very radioactive tea.','Brothers in arms! {t}, kettle is coming!'],
+    betray:['Our friendship was always temporary, {t}. Like everything except kettle.'],
+    nuke:['Pour all the tea! ALL OF IT! At {t}!','Everything! The whole samovar! {t}, drink this!'],
+    ufo:['Aliens! Very rude. Did not even bring tea.'],
+    sabotage:['My agent is very subtle. He is wearing a fur hat in the desert. Nobody will notice.','We send a spy to {t}. He is disguised as a different kettle.'],sabotaged:['Who replaced my warhead with a nesting doll?!','My pipeline! Someone filled it with decaf!'],caught:['That spy is not ours. He just happens to have my phone number tattooed on him.'],
+    win:['At last. Tsar of everything. The crown fits. It is still a kettle.'],
+    lose:['Put the kettle on... for the last time.']}},
+ { key:'china', nation:'China', leader:'Chair Spreadsheet', art:'mo', color:'#e0503a', pos:[240,60], lab:'b', spread:[[-10,-2],[8,-4],[2,6]], rigs:0,
+   bio:'Sees the world only in KPIs. Nuclear winter is "a seasonal adjustment."',
+   quirk:'Every build produces two items.',
+   start:{pop:150,oil:4,missiles:3,warheads:[20,20,50],bombers:1,abm:2}, aggr:.45,
+   lines:{
+    build:['Missile output exceeds quarterly target by 312%. Please applaud in cell B7.','Two new weapons. One for us, one for the growth chart.'],
+    defense:['Defense budget reallocated from row 40: "Joy".','Shield installed. Satisfaction survey mandatory.'],
+    propaganda:['{t}, our citizens enjoy 99.8% satisfaction. The other 0.2% are being recalculated.','Join us, {t}. Free Wi-Fi. Very watched Wi-Fi.'],
+    launch:['Annihilation of {t} is now a line item. Moving on to Q4.','{t} was underperforming. We have optimized them.'],
+    hit:['Unacceptable. That city had a five-star efficiency rating!','A negative variance. It will be noted. In red.'],
+    block:['Missile intercepted. Efficiency 100%. Emotion 0%.','Blocked. Adding a smiley face to the report. Just one.'],
+    oil:['Oil reserves were in a hidden tab. Unhiding now.','Barrels acquired. Barrel-to-happiness ratio: stable.'],
+    ally:['{t}, a strategic partnership. Synergy projected at 140%. Terms in tab 9.','Merge with us, {t}. Your data is already in our cloud.'],
+    accept:['Partnership approved. Friendship metric: up 3%.','Agreement signed. Both columns now green.'],
+    decline:['Proposal rejected. Insufficient ROI.','No. Your friendship has a negative cash flow.'],
+    teamup:['Supporting our partner. {t} added to the deletion list.','Co-strike on {t} scheduled. Calendar invite sent.'],
+    betray:['Partnership deprecated, {t}. Please update your expectations.'],
+    nuke:['Executing macro DELETE_ALL on {t}. No undo.','Liquidating {t}. Quarterly results will be spectacular.'],
+    ufo:['Unscheduled extraterrestrial event. Adding a new column: "Space".'],
+    sabotage:['Deploying malware to {t}. It is a very large spreadsheet. It will crash everything.','Agent dispatched. He is invisible on paper. On paper only.'],sabotaged:['Someone deleted the missile column! Ctrl+Z! CTRL+Z!','Who changed the font to Comic Sans?! The silos refuse to launch in Comic Sans!'],caught:['Our agent was caught. He has been reclassified as a "consultant".'],
+    win:['Global population: one bloc. Market share: 100%. Synergy.'],
+    lose:['#REF! #REF! #REF!']}},
+ { key:'europe', nation:'Europe', leader:'Commissioner Paperweight', art:'paper', color:'#4a7ad8', pos:[150,36], lab:'t', spread:[[-8,-2],[7,-3],[1,5]], rigs:0,
+   bio:'Cannot retaliate until 27 sub-committees agree. They never agree.',
+   quirk:'Starts with 3 defenses, and its shields block more often.',
+   start:{pop:120,oil:3,missiles:2,warheads:[20,20],bombers:1,abm:3}, aggr:.3,
+   lines:{
+    build:['Missile approved, pending 27 signatures, 4 translations and a strike by the translators.','We have built a missile. It complies with all accessibility standards.'],
+    defense:['Directive 4471/B: incoming missiles must now queue.','Defense shield enacted. Also a cookie banner for the shield.'],
+    propaganda:['{t}, come to Europe. Six weeks of holiday and a very long lunch.','We sent {t} a brochure. It is 900 pages. The brochure has a brochure.'],
+    launch:['After lengthy deliberation, we fire one missile at {t}. With a strongly worded label.','Retaliation against {t} approved. Nobody is happy. That is how you know it is fair.'],
+    hit:['We condemn this in the strongest terms, in 24 languages, by Tuesday.','This breaches regulation 12, subsection "please do not".'],
+    block:['Missile intercepted. It lacked the proper stamp.','Rejected. Please resubmit your missile in triplicate.'],
+    oil:['We have secured oil by forming a Committee on Not Having Oil.','Three barrels found. Four committees now arguing about them.'],
+    ally:['{t}, we propose an alliance. Please fill out forms A through ZZ. Twice.','An alliance with {t}? We drafted a 400-page friendship treaty. Page one is apologies.'],
+    accept:['Alliance ratified! It only took 31 votes and a sandwich.','Agreed. A commemorative stamp is already being designed.'],
+    decline:['We regret to decline. The paperwork was in the wrong font.','Rejected by committee. Committee also rejected lunch.'],
+    teamup:['In solidarity with our ally, {t} receives one firmly worded missile.','Joint action! Approved surprisingly fast. Everyone was hungry.'],
+    betray:['Alliance terminated, {t}. The 90-day notice period has been waived. By us.'],
+    nuke:['Article 7, subsection boom: everything at {t}.','All member states agree, for once! FIRE EVERYTHING at {t}!'],
+    delay:['Retaliation postponed. Sub-committee 14 is on holiday.','The strike is approved in principle. The principle is on lunch.'],
+    strike:['We are on strike against ourselves. It was unanimous. A first.','Still on strike. The coffee machine is also on strike.'],
+    ufo:['Aliens are not covered by any treaty. We will draft one. In about nine years.'],
+    sabotage:['We are sending an inspector to {t}. He will audit their missiles until they give up.','Covert action approved. After a 3-month public consultation.'],sabotaged:['Someone filled our silos with regulations! ...Wait, those were ours.','The defenses have been sabotaged! Also the coffee. Mostly the coffee.'],caught:['Our spy was caught because he stopped for a two-hour lunch.'],
+    win:['We have won. A committee will be formed to decide how to feel about it.'],
+    lose:['Please file your complaint in triplicate... with nobody.']}},
+ { key:'nk', nation:'North Korea', leader:'Marshal Brassbuckle', art:'brass', color:'#d23a5a', pos:[272,54], lab:'r', spread:[[-3,-2],[3,-3],[0,3]], rigs:0,
+   bio:'Has more medals than square inches of uniform. State TV scores every missile test a perfect 10.',
+   quirk:'Starts with 5 missiles and builds missiles more often.',
+   start:{pop:45,oil:2,missiles:5,warheads:[10,20,20,10],bombers:0,abm:1}, aggr:.8,
+   lines:{
+    build:['Glorious new missile! State TV scores it a perfect 10. The judges are also me.','Another missile! Another medal! I am running out of chest.'],
+    defense:['Defense grid complete! Mostly cardboard, but very patriotic cardboard.','Shield ready. It salutes me when I walk past.'],
+    propaganda:['{t}, defect to paradise! Everyone gets a haircut! The same haircut!','State TV reports {t}\'s people are fleeing to us. State TV is very reliable. State TV is me.'],
+    launch:['Launching at {t}! If it misses, it was a test. If it hits, it was genius.','A medal for me! Today\'s medal is for bravery against {t}.'],
+    hit:['No damage! That explosion was a fireworks show in my honor.','You insulted my medals! Several are now molten!'],
+    block:['Shot it down! Another medal! Where do I even put it?','Blocked by my cardboard! Cardboard wins again!'],
+    oil:['We found oil! In the gift shop of the Ministry of Oil.','Two barrels! State TV reports two thousand.'],
+    ally:['{t}! Be my friend! You get a medal! Everybody gets a medal!','Join me, {t}. State TV will report you as very handsome.'],
+    accept:['New best friend! Medal for you! Medal for me! Medal for the medal!','Friendship! State TV scores it a perfect 10!'],
+    decline:['Rejected?! State TV will report that YOU begged.','You will regret this, {t}. I am writing it on a medal.'],
+    teamup:['Helping my friend! {t}, receive gift of fire!','Team attack! Extra medal for teamwork!'],
+    betray:['Friendship cancelled, {t}! Your medal is revoked! I am eating it!'],
+    nuke:['THE BIG BUTTON! I have polished it for years! Goodbye, {t}!','ALL MISSILES! State TV, prepare the 11 out of 10!'],
+    misfire:['Missile has gone... sideways. State TV: it was a dance.','That was a warning shot. At the ocean. The ocean has been warned.'],
+    ufo:['Aliens have come to admire me! State TV, roll the cameras!'],
+    sabotage:['My best spy goes to {t}! He is dressed as a tree. A tree with medals.','Secret mission! State TV will broadcast it live, but it is still secret!'],sabotaged:['Someone painted my missiles to say "made in a hurry"!','Sabotage! My medals were replaced with bottle caps! ...They look the same.'],caught:['That was not a spy! That was a very lost ballet dancer! With dynamite!'],
+    win:['Everyone agrees I win! Everyone is also me.'],
+    lose:['Tell state TV to report this as... victory.']}},
+ { key:'israel', nation:'Israel', leader:'PM Yael Juggler', art:'yael', color:'#5ab0f0', pos:[176,64], lab:'l', spread:[[-2,-2],[2,-3],[0,2]], rigs:0,
+   bio:'Permanently juggling seven coalition partners. If one ball drops, the government falls mid-war.',
+   quirk:'Defense builds give 3, and its shields block more often.',
+   start:{pop:40,oil:3,missiles:2,warheads:[20,20],bombers:1,abm:4}, aggr:.5,
+   lines:{
+    build:['More missiles! Partner 4 wanted a bridge. Partner 4 gets a bridge-shaped missile.','New weapons, built by a startup in a garage. The garage is now worth a billion.'],
+    defense:['Defense upgraded. It intercepts missiles, drones and resignation letters.','Shield online. The coalition agrees on it. I am framing this moment.'],
+    propaganda:['{t}, come join us! Warning: you will immediately be asked to start a party.','Our startup made {t}\'s citizens an app. The app is just our country.'],
+    launch:['Launching at {t}! Partners 1, 3 and 6 approve. Partner 5 is sulking. Partner 2 is in the bathroom.','Missile away at {t}. Two coalition partners already want credit.'],
+    hit:['Ow! And three coalition partners just resigned. In protest. Of the explosion.','I was juggling! Now I am juggling rubble!'],
+    block:['Intercepted! Finally, something the whole coalition agrees on.','Shot down. The app has also sent it a push notification.'],
+    oil:['We invented a machine that makes oil from startup pitch decks.','Oil acquired. Partner 3 wants it painted blue.'],
+    ally:['{t}, want to join the coalition? It\'s only seven partners. Eight is fine. Probably.','Alliance, {t}? Our startup made a friendship app. It\'s in beta.'],
+    accept:['Welcome! You are coalition partner number eight. Please take a ball.','Deal! Partner 5 is already jealous.'],
+    decline:['Declined. The coalition voted. It was 4 to 3 to 1, somehow.','No thanks. I can\'t juggle any more balls.'],
+    teamup:['Joining in on {t}! Three partners approve, one is filming it.','Coordinated strike on {t}! The app worked!'],
+    betray:['Sorry, {t}. Coalition partner 2 insisted. Partner 2 is always insisting.'],
+    nuke:['All seven partners agree! It\'s a miracle! FIRE EVERYTHING at {t}!','Every missile at {t}! Finally a decision!'],
+    skip:['Can\'t act this turn. Juggling. Seven balls. One is on fire.','Coalition crisis! Partner 6 left. Partner 6 came back. Turn over.'],
+    ufo:['Aliens! Quick, somebody build an app for that.'],
+    sabotage:['Our tech team made an app that sabotages {t}. The password is "password".','Covert op on {t}. Partner 3 already leaked it to the press.'],sabotaged:['Someone hacked our defense app! It only orders pizza now!','Sabotage! Coalition partner 4 says it was not him. It was him.'],caught:['The agent got caught. He kept stopping to pitch his startup.'],
+    win:['We won! Now the hard part: agreeing on who gets credit.'],
+    lose:['The coalition... has collapsed. Literally.']}},
+ { key:'iran', nation:'Iran', leader:'Farhad Sanctionzadeh', art:'smug', color:'#3ec08a', pos:[194,66], lab:'b', spread:[[-6,-2],[5,-3],[0,4]], rigs:2,
+   bio:'"The Loophole." A shifty sanctions-dodger with gold bars, burner phones and an oil barrel hidden in his coat.',
+   quirk:'Drilling pumps 5 oil, and oil shortages make him richer.',
+   start:{pop:70,oil:10,missiles:2,warheads:[10,20,20],bombers:1,abm:1}, aggr:.55,
+   lines:{
+    build:['Got some missiles. Don\'t ask. Fell off a very, very large truck.','New weapon, slightly used. One careful owner. Mostly careful.'],
+    defense:['Defenses installed. Bought secondhand. Only a little bit on fire.','Shield from a guy who knows a guy. The guy is me.'],
+    propaganda:['{t}, psst. Want citizens? I got citizens. Cheap. Slightly used.','Come to my country, {t}. First month free. Second month, we talk.'],
+    launch:['Special delivery for {t}! No returns. No receipts. No questions.','{t}, this package was never here. Neither was I.'],
+    hit:['Hey! Those were counterfeit cities! The real ones are hidden. Probably.','You broke it, you bought it. Cash only.'],
+    block:['Intercepted! Then sold for scrap. Profit!','Missile caught. Already listed online. Good condition.'],
+    oil:['Sanctions? Never heard of \'em. Here\'s 5 barrels labeled "grape juice".','Oil? What oil? Oh, this oil. Very reasonable price.'],
+    ally:['Psst, {t}. Partnership? Fifty-fifty. Sixty-forty. We\'ll talk.','{t}, my friend. Let\'s team up. I bring the oil, you bring... don\'t ask.'],
+    accept:['Deal! Shake hands. Now count your fingers.','Pleasure doing business. No receipts, of course.'],
+    decline:['No deal. I got a better offer. From a guy.','Pass. Your terms are too honest.'],
+    teamup:['Helping my partner. {t}, special delivery. Cash on arrival.','Sure, I join. My invoice will follow.'],
+    betray:['Nothing personal, {t}. Strictly business. Very dodgy business.'],
+    nuke:['Clearance sale! EVERYTHING must go! All of it, to {t}!','Emptying the coat! Every missile, at {t}!'],
+    ufo:['Hey! That was my stuff! ...Hey, do you need any oil?'],
+    sabotage:['I know a guy in {t}. He knows a guy. That guy has a wrench.','Little sabotage for {t}. Nothing big. Very affordable.'],sabotaged:['Someone stole my stuff! That is MY job!','My oil turned into actual grape juice! Who did this?!'],caught:['That spy? Never seen him. Okay, he is my cousin. Second cousin.'],
+    win:['I won the world. Selling it tomorrow. Very reasonable price.'],
+    lose:['Nobody saw me here. You understand? Nobody.']}}
+];
+const ALIEN={
+ raid:['Greetings, Earthlings. Your planet is lowering property values in this sector.','We have received complaints about the noise. Please hold still.','Your lawn is glowing. That violates bylaw 4, subsection "ew".'],
+ abduct:['We are borrowing some citizens for a short survey. They will be returned. Most of them.','Quick question for your people: how would you rate your planet out of ten? Please step into the beam.'],
+ snatch:['We will be confiscating this. No fireworks after 10 PM.','This missile is now ours. We collect them. Like stamps.','Beep. Bloop. Confiscated. Have a pleasant evening.'],
+ drop:['Oops. Wrong country. Our GPS is from 1987.','Returning your citizens. To {t}. Close enough.','Survey complete. Dropping everyone off in {t}. They seemed to like it there.'],
+ ret:['We are returning your citizens. They have all received matching haircuts and a souvenir hat.','Survey complete. Your people rated your planet 3 out of 10. Here they are back.'],
+ cows:['We only came for the cows. "Moo" is the highest compliment in our language.','Do not be alarmed. We are simply borrowing your cows. For science. And milkshakes.'],
+ fine:['The Homeowners Association has run out of patience. Everyone is being fined. In people.']
+};
+
+/* ---------- extra dialogue (merged into LEADERS lines; edit freely) ---------- */
+const EXTRA={
+ america:{
+  launch:["Bailiff, escort this warhead to {t}. Gently. Then very much not gently.","The jury has reached a verdict on {t}. The verdict is 'kaboom'.","I sentence {t} to community service. The community is a crater.","Ratings are down. Let's boost them. Hello, {t}!"],
+  hit:["My ratings! My beautiful ratings!","This is a courtroom, not a crater! Well, now it's both.","Somebody get me a lawyer! Wait, I'm a judge. Get me a better judge!","The studio audience is fleeing. Applause sign: ON!"],
+  build:["New missiles, sponsored by Gavel-Cola. Taste the verdict!","We built a missile shaped like a gavel. Very heavy. Legally binding.","Court-ordered missile production. Overtime is mandatory and televised."],
+  propaganda:["{t}, appear on my show and win a lifetime supply of cheese in a can!","Free courtroom tickets for everyone in {t}! Front row! Splash zone!","{t}, our reality shows are your reality now."],
+  defense:["I've issued a restraining order against all incoming missiles.","Shields up! And a disclaimer. Lots of disclaimers."],
+  oil:["Oil found under the judge's chair. I've been sitting on a fortune.","Drill, bailiff, drill! On camera, please."],
+  block:["Objection sustained! Missile thrown out of court!","Your missile has been found NOT GUILTY of hitting anything."],
+  sabotage:["Our agent is disguised as a juror. Nobody ever looks at jurors.","Sending a process server to {t}. The process is explosives."],
+  sabotaged:["Someone replaced my gavel with a rubber chicken! It squeaks when I rule!","My teleprompter is showing somebody else's show!"],
+  ally:["{t}, be my co-host. You get your name in the credits. Small font.","{t}, let's do a crossover episode. I'm the star. You're also there."],
+  accept:["Wonderful! Our friendship is now a two-part special!","Sustained! Somebody cue the confetti cannon."],
+  decline:["Motion to be friends: denied with prejudice.","I don't co-host with amateurs."],
+  teamup:["Court is in session for {t}! My co-host and I will deliberate. Loudly.","Tag-team verdict on {t}! Commercial break after!"],
+  nuke:["I hereby declare a mistrial for all of {t}. Fire everything!","Season finale! EVERYTHING at {t}!"],
+  ufo:["Aliens on my show without signing the release form? Bailiff!","Those little green people are in contempt of court!"],
+  betray:["Our co-hosting contract had a very small clause, {t}. Section 'boom'."],
+  taunt:["{t} just got served. By a missile. Ha!","Ooh, {t}. That's going to cost you in the ratings.","The court finds {t} guilty of standing in the wrong place.","Let the record show {t} is now a parking lot."],
+  chat:["Today's episode: Who Stole The Planet? Spoiler: everyone.","Remember, folks: if it's on TV, it must be legal.","I have a dream. It's mostly about ratings.","Coming up after the war: my new cooking show, 'Grilled'."],
+  desperate:["I'd like to call a recess. A very long recess. Maybe forever.","Bailiff? Bailiff?! Has anyone seen the bailiff?"]},
+ russia:{
+  launch:["Is not missile. Is very fast tea delivery for {t}. Mind the hot.","{t}, I bring gift! Gift is on fire.","Pour tea, sing song, press button. Is tradition.","{t}, I annex your skyline. Is now my skyline. Also is gone."],
+  hit:["Ow! My kettle! The crown! THE CROWN!","Who put explosion in my tea?","This is not damage. This is renovation. Very aggressive renovation.","My palace! I had just dusted the second kettle!"],
+  build:["New missile! Painted gold, like crown. Like crown, is also kettle.","Factory produce three missiles and one very confused bear.","We build missile out of old samovars. Is very hot missile."],
+  propaganda:["{t}, come to Russia! Winter is only eleven months!","Free fur hats for everyone from {t}! One size. Very big size.","{t}, your grandmother is secretly Russian. I checked. I decided."],
+  defense:["We put snow on everything. Missiles hate snow.","Big shield. Shaped like kettle lid. Is very strategic lid."],
+  oil:["Oil! Gas! Tea! Russia has all the liquids!","We drill so deep we hit other side of planet. Hello, neighbours."],
+  block:["Ha! Your missile froze! Is Russian winter, friend.","Missile caught. Now we use it as tea spoon."],
+  sabotage:["Our spy is disguised as bear. Very convincing. Is actually bear.","Agent going to {t}. He packed tea. Lots of tea. Some explosives."],
+  sabotaged:["Who put decaf in my samovar?! This is war crime!","My crown has been replaced with regular kettle! ...Oh. Is same."],
+  ally:["{t}, together we rule world. You rule small part. Very small.","Friendship, {t}? I bring tea, you bring biscuits. Is fair deal."],
+  accept:["Good! Now we are allies. Is like family. Complicated family.","Da! We seal deal with tea. Very hot. Do not spill."],
+  decline:["Nyet. Your biscuits are suspicious.","No. My kettle says you are not trustworthy. Kettle is never wrong."],
+  teamup:["For my friend! {t}, you get double tea!","Brothers! Together we pour on {t}!"],
+  nuke:["THE BIG KETTLE IS BOILING! Everything to {t}!","I waited my whole life to press this. Is very satisfying button."],
+  ufo:["Space people! You want tea? No? Then GET OFF MY LAWN.","Aliens took my cows. Now who will I annex?"],
+  betray:["Friendship was nice, {t}. Like summer. Very short."],
+  taunt:["Ha! {t} should have built kettle-shaped shield.","{t} now has very modern ventilation.","Look at {t}! Is like my tea. Steaming.","{t}, I send condolences. And invoice."],
+  chat:["Is cold today. Is cold every day. I love it.","I wonder if moon would like to be annexed.","Tea is ready. War is ready. Everything is ready.","Someday, real crown. Not kettle. Someday."],
+  desperate:["Okay, maybe we stop? We have tea. Everyone likes tea?","The kettle... is getting cold."]},
+ china:{
+  launch:["Initiating Q3 strategic adjustment of {t}.","{t} has been flagged as an outlier. Removing outlier.","Running formula =EXPLODE({t}). Calculating.","Sending {t} a performance review. It is very negative. It is a missile."],
+  hit:["Data loss detected! This was not backed up!","My beautiful pivot tables! Unpivoted!","This explosion was not in the forecast.","Error 404: City not found."],
+  build:["Production up 400%. Morale up 0.01%. Acceptable.","We built a missile. Also a spreadsheet about the missile. Mostly the spreadsheet.","Copy. Paste. Missile. Copy. Paste. Missile."],
+  propaganda:["{t}, our quarterly happiness report is 98% green. Join us. Be green.","Citizens of {t}: we have fast trains and faster surveillance!","{t}, please rate our country. Five stars is the only option."],
+  defense:["Firewall upgraded. Also a regular wall. Very long wall.","Defense module installed. Version 2.0. Patch notes: 'no.'"],
+  oil:["Oil located in cell Z9999. Scrolling down to get it.","Barrels acquired. Graph goes up. Everyone smiles. Required."],
+  block:["Intercepted. Please submit your missile through the proper channels.","Your missile failed validation."],
+  sabotage:["Deploying a macro virus to {t}. It turns all their numbers into dates.","Our agent will merge all of {t}'s cells. Chaos."],
+  sabotaged:["Someone sorted our missiles alphabetically! Now we cannot find anything!","Who turned off autosave?! WHO?!"],
+  ally:["{t}, a joint venture. 51% us, 49% you, 100% synergy.","Proposal for {t}: let us share a spreadsheet. We keep edit rights."],
+  accept:["Partnership approved. Shared document created. You have view-only access.","Agreement logged. Please initial every page. There are 9,000 pages."],
+  decline:["Rejected. Your proposal was in the wrong file format.","No. Your growth projections are unconvincing."],
+  teamup:["Co-optimizing {t}. Synergy at maximum.","Assisting partner. {t} reclassified as 'legacy'."],
+  nuke:["Select all. Delete. Target: {t}. Are you sure? Yes.","Executing final quarterly report on {t}. The report is fire."],
+  ufo:["Aliens are not in our org chart. Please leave.","Unknown vendor in our airspace. Requesting invoice."],
+  betray:["Contract terminated, {t}. You did not read paragraph 4,019."],
+  taunt:["{t} is now trending downward. Sharply.","Look at {t}'s numbers. Tragic. Beautiful chart, though.","{t} has entered a period of negative growth.","We have moved {t} to the archive."],
+  chat:["I dream in spreadsheets. Even my dreams have gridlines.","Productivity is up. Joy is down. Within tolerance.","Reminder: mandatory happiness meeting at 9.","Our 500-year plan is on schedule. Year 3."],
+  desperate:["Forecast revised. The forecast is now 'help'.","Ctrl+Z is not working on real life. I have filed a ticket."]},
+ europe:{
+  launch:["After 14 votes and a coffee break, we fire one missile at {t}. It has a QR code.","This missile carries a warning label in 24 languages. {t}, please read quickly.","Regulation 9: missiles must arrive within 5 working days. {t}, today is day 1.","The committee agreed. Nobody knows how. Fire at {t}!"],
+  hit:["We will form a committee to investigate the explosion. And a sub-committee for the smoke.","This is highly irregular! Where is the form for this?","Our capital! It had such lovely bike lanes!","We strongly condemn this. Very strongly. Medium strongly. Strongly."],
+  build:["Missile built to strict standards. It is recyclable. Please do not recycle it yet.","New weapon approved. It took 6 years and one weekend.","Our missile now has a USB-C port. By law."],
+  propaganda:["{t}, come to Europe! 35-hour work week! 40-hour lunch!","{t}, we offer free healthcare, free museums and free forms. So many forms.","{t}, we have 900 kinds of cheese. You have... cheese."],
+  defense:["Shield installed. It requires cookie consent before blocking anything.","New directive: all missiles must now pass through customs."],
+  oil:["We found oil. Sadly it is protected by 12 environmental regulations.","Oil drilled. Carbon offset purchased. Guilt also purchased."],
+  block:["Missile rejected. Incorrect paperwork. Please try again in 6 to 8 weeks.","Blocked! Your missile did not have a valid passport."],
+  sabotage:["We are sending an auditor to {t}. Nothing survives an audit.","Our agent will introduce a new regulation in {t}. They will never recover."],
+  sabotaged:["Someone changed all our forms to Comic Sans! The horror!","Our missiles are now in triplicate. All three are empty!"],
+  ally:["{t}, may we propose a framework for a pre-agreement on discussing an alliance?","Join us, {t}. The membership fee is reasonable. The paperwork is not."],
+  accept:["Wonderful. We will now negotiate the terms. Expected completion: never.","Alliance approved! A ceremony with 400 speeches will follow."],
+  decline:["We must decline. Your application lacked form 7-B.","Regrettably no. The vote was 13 to 13, with one abstention for lunch."],
+  teamup:["Solidarity with our ally! {t}, you are formally reprimanded. With a missile.","Joint action against {t}! Approved in record time: 3 months!"],
+  nuke:["Emergency session! Everyone agrees! FOR THE FIRST TIME! Fire everything at {t}!","Directive Omega: {t} is to be removed. All member states, fire!"],
+  ufo:["Unregistered spacecraft! Please present your flight plan in triplicate!","The aliens did not accept our cookies. Escalating."],
+  betray:["We have reviewed our alliance, {t}. It has been repealed. Retroactively."],
+  taunt:["We express deep concern for {t}. Deep concern. Also a little satisfaction.","{t} clearly did not comply with safety regulations.","Oh dear, {t}. We will send a strongly worded sympathy card.","{t} is now a protected heritage site. Very protected. Very flat."],
+  chat:["Today's agenda: item 1, lunch. Item 2, war. Item 3, more lunch.","We have harmonised the size of bananas. Next: missiles.","A new committee was formed to reduce committees.","Has anyone seen the minutes from the meeting about the minutes?"],
+  desperate:["We... surrender? Is there a form for surrender?","Please send help. Fill in the attached request first."]},
+ nk:{
+  launch:["Missile launched! State TV scores it 10! Before it even lands!","{t}, receive my gift! It is shiny! It is loud! It is also from me!","Another historic launch! Historic launch number 4,872!","{t} insulted my haircut. Nobody insults the haircut."],
+  hit:["State TV reports: this explosion is a celebration of my birthday.","Who did this?! Only I am allowed to explode things!","My medals melted into one big medal! ...I like it.","Explosion? No. Fireworks. Very aggressive fireworks."],
+  build:["New missile! I gave it a medal for being a missile!","Workers built this missile in one hour! State TV says one minute!","This missile is so beautiful, I gave it a parade."],
+  propaganda:["{t}, come live here! Every day is a parade! Mandatory parade!","State TV now broadcasts into {t}. It is only me. Singing.","{t}, we have the best everything. State TV said so. Twice."],
+  defense:["Shield ready! Made of medals. Very shiny. Very confusing for missiles.","Our anti-missile system is very advanced. It is a man with a very big net."],
+  oil:["We found oil! Also a medal. The medal was in the oil.","Oil! State TV reports we now have all the oil. All of it."],
+  block:["Intercepted! By my genius! Medal for my genius!","Your missile got scared of my medals and left."],
+  sabotage:["My spy is disguised as a tree. With medals. Nobody suspects trees.","Secret mission to {t}! Do not tell anyone! State TV is filming."],
+  sabotaged:["Someone swapped my medals for chocolate coins! ...I ate them. Delicious betrayal.","Who painted my missile pink?! ...Actually it looks nice."],
+  ally:["{t}! Be my best friend! You get a medal shaped like my face!","{t}, alliance! We will have a joint parade! I will be in front!"],
+  accept:["Best friends forever! Or until Tuesday!","Friendship medal! Friendship parade! Friendship missile? Later."],
+  decline:["Rejected?! State TV will report you cried.","You are removed from my birthday list!"],
+  teamup:["I help my friend! {t}, receive double fireworks!","Team attack! I take credit! All credit!"],
+  nuke:["THE BUTTON! I waited my whole life! Everything at {t}!","State TV, start the countdown! Make it dramatic! FIRE ALL AT {t}!"],
+  ufo:["Aliens! Did you come for my autograph?","State TV: aliens visited to give me a space medal."],
+  betray:["Friendship over, {t}! I take back the medal! And the parade!"],
+  taunt:["Ha ha! {t} got exploded! State TV, replay in slow motion!","{t} should have had more medals. Medals are armour.","Look at {t}! Very flat. Very sad. Very funny.","State TV scores {t}'s defense a 2. Out of 100."],
+  chat:["Today I invented a new color. It is called 'me'.","Daily reminder: I am wonderful.","I scored a hole-in-one eleven times this morning.","State TV weather: sunny wherever I go."],
+  desperate:["State TV will report this as a strategic... nap.","Everything is fine! Fine! FINE!"]},
+ israel:{
+  launch:["Launching at {t}! Partner 6 approved, partner 2 is filming, partner 4 wants a refund.","Missile away! Our startup built it. It has an app. The app is the missile.","{t}, this missile is in beta. Please report bugs. If you survive.","Coalition vote passed 4 to 3! Fire at {t}! Before anyone changes their mind!"],
+  hit:["Ow! Three partners resigned! Two un-resigned! One is just shouting!","Our startup district! The valuation just dropped to zero!","I was juggling seven balls and now one is ON FIRE!","This will be on the news. I will be on the news. Again."],
+  build:["New missile! Built by three engineers and one very ambitious intern.","We pivoted our food-delivery startup into missiles. Same delivery times.","Our new missile has AI. It keeps asking for a raise."],
+  propaganda:["{t}, join our startup nation! Equity for everyone! The equity is worth nothing!","{t}, we have beaches, startups and 70 political parties! Pick one! Pick ten!","Free hummus for everyone from {t} who moves here! Limited offer!"],
+  defense:["Defense upgraded! It intercepts missiles and spam emails.","New shield! Partner 3 named it. It has a very long name."],
+  oil:["We made oil from recycled startup pitch decks. So many pitch decks.","Oil found! Partner 5 wants to found a ministry for it."],
+  block:["Intercepted! The app sends you a push notification: 'Nice try.'","Blocked! Finally the coalition agrees on something: ha ha!"],
+  sabotage:["Our hackers are in {t}'s system. The password was 'password1'. Very sophisticated.","Covert op on {t}. It's top secret. It's also on social media."],
+  sabotaged:["Someone hacked our app! Now it only plays elevator music!","Coalition partner 4 swears it wasn't him. It was definitely him."],
+  ally:["{t}, want to join the coalition? Everyone else has. Some twice.","{t}, let's partner up! We'll launch an app for alliances."],
+  accept:["Partner number eight! Welcome! Please take a number. And a ball.","Great! Now we can argue together!"],
+  decline:["No thanks. The coalition is full. The coalition is always full.","Sorry. Partner 2 said no. Partner 2 always says no."],
+  teamup:["Joining our ally against {t}! Six partners agree! One is on vacation!","Coordinated strike on {t}! The group chat is going wild!"],
+  nuke:["The entire coalition agrees! A MIRACLE! Fire everything at {t}!","Unanimous vote! Unheard of! EVERYTHING at {t}!"],
+  ufo:["Aliens! Wait. Can we get them to invest in our startup?","Did the aliens just abduct coalition partner 4? ...Should we tell anyone?"],
+  betray:["Sorry, {t}. Coalition reshuffle. You've been reshuffled out."],
+  taunt:["{t} should have had better defense apps. Ours has five stars.","Oof, {t}. That's going to hurt your valuation.","{t} just got disrupted. Literally.","Hey {t}, want to buy an anti-missile app? Too late?"],
+  chat:["Just survived another coalition meeting. I deserve a medal. North Korea has extras.","My phone has 900 unread messages. All from coalition partners.","New startup idea: an app that predicts which partner quits next.","Someone just founded another party. That makes 71."],
+  desperate:["Coalition partners, please, PLEASE, agree on ONE thing.","I've dropped all seven balls. They are rolling under the couch."]},
+ iran:{
+  launch:["Special delivery for {t}. No signature required. Not possible either.","{t}, I got a package for you. Don't ask what's inside. It's a missile.","Cash on delivery, {t}! Actually, missile on delivery.","Business is business, {t}. And this is very bad business for you."],
+  hit:["Hey! That was a perfectly good warehouse of totally legal stuff!","My grape juice! My barrels! My cousin's barrels!","Ow! Okay. I give you 10% discount on the next deal. 5%.","You broke my counterfeit palace! Now I need a counterfeit new one!"],
+  build:["Got some missiles. A guy owed me a favour. Big favour.","New missile. Bought it online. It has 4.5 stars.","This missile? It fell off a boat. A very big boat."],
+  propaganda:["{t}, psst. Wanna move here? I'll get you a great deal on a passport.","Come to my country, {t}! Cheap oil! Cheap rent! Don't check the quality!","{t}, I'm offering citizenship. Today only. Tomorrow also. Every day."],
+  defense:["Defense system installed. It's second-hand. The first hand is missing.","Shield from a guy. He said it works. He said that about the last one too."],
+  oil:["Five barrels! Labelled 'olive oil'. They are not olive oil.","Oil? I got oil. I got oil for oil. I got oil in my shoes."],
+  block:["Blocked! I'll sell your missile back to you. Good price.","Intercepted! Already got three buyers for the scrap."],
+  sabotage:["I got a cousin in {t}. Every country has my cousin.","Small job in {t}. Very discreet. My guy wears sunglasses at night."],
+  sabotaged:["Someone smuggled into MY country? That's unprofessional!","My oil is now real grape juice! My whole life is a lie!"],
+  ally:["{t}, let's do business. You scratch my back, I sell you a back scratcher.","{t}, partnership? I bring the oil, you bring... we figure it out."],
+  accept:["Deal! Shake hands! Now let me see your hand again. Count the fingers.","Partners! Fifty-fifty! I keep my fifty, you keep yours, I also keep the extra."],
+  decline:["Pass. I got a better offer from a guy named The Other Guy.","No deal. Your coat doesn't even have pockets."],
+  teamup:["Helping my partner. The invoice for {t} is in the mail. The mail is a missile.","I'm in! Partner discount on {t}!"],
+  nuke:["Everything must go! Closing-down sale! ALL MISSILES to {t}!","Emptying the whole coat! {t}, you're getting everything!"],
+  ufo:["Hey! Those were MY cows! I was going to sell them!","Aliens! Finally, new customers!"],
+  betray:["Nothing personal, {t}. Someone offered more."],
+  taunt:["Ooh, {t}. You need repair parts? I know a guy.","Too bad, {t}. Shoulda bought my insurance.","{t}, I'll buy your rubble. Cheap.","Look at {t}! Business opportunity!"],
+  chat:["Anybody need a slightly used submarine? Asking for a friend.","My coat has 47 pockets. I've lost count of what's in them.","Today's special: oil. Tomorrow's special: also oil.","I never break the law. I just bend it. A lot."],
+  desperate:["Okay okay okay. Everyone gets a discount. Big discount. Please stop.","Maybe I hide in my coat for a while."]}
+};
+for(const L of LEADERS){const X=EXTRA[L.key]||{};for(const k in X)L.lines[k]=(L.lines[k]||[]).concat(X[k])}
+ALIEN.raid.push('Attention residents: your planet has been selected for a random inspection.','We are here about your noise complaint. The complaint is from us.');
+ALIEN.abduct.push('Please stand still. Our tractor beam is new and the manual is in Martian.','Today we are taking volunteers. You have been volunteered.');
+ALIEN.snatch.push('Finders keepers. That is intergalactic law.','Another one for the collection. We are running out of shelf space.');
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const R=Math.random, rnd=(a,b)=>a+R()*(b-a), pick=a=>a[Math.floor(R()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const byL=k=>LEADERS.find(l=>l.key===k);
+const sub=(s,T)=>String(s||'').replace(/\{t\}/g,T?T.nation:'everyone');
+const BAGS={};
+function bagPick(key,arr){if(!arr||!arr.length)return '';let b=BAGS[key];if(!b||!b.length){b=BAGS[key]=shuffle(arr.map((_,i)=>i));if(b.length>1&&b[b.length-1]===BAGS[key+'#'])b.unshift(b.pop())}const i=b.pop();BAGS[key+'#']=i;return arr[i]}
+function ln(n,cat,T){return sub(bagPick(n.key+'|'+cat,n.lines[cat]),T)}
+function aln(cat){return bagPick('alien|'+cat,ALIEN[cat])}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const G={fast:false,nations:null,gen:0,allies:new Set(),flash:0,craters:[]};
+const spd=()=>G.fast?.45:1;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms*spd()));
+
+/* ---------- portrait painter (Amiga-style dithered pixels) ---------- */
+const K={sk1:['#3a1a10','#6b2e1a','#a24e2e','#d2784c','#f0a878','#ffd0a8'],sk2:['#2a1408','#5a2e14','#8a4e28','#b8763e','#dca064','#f6c890'],olv:['#101808','#24341a','#3e5428','#5c7a3a','#82a052'],gry:['#202226','#40444c','#666b75','#9096a0','#c4c8d0'],wh:['#505058','#80808a','#aeb0ba','#d6d8e0','#fafafc'],red:['#300808','#6a1010','#a82020','#e04040','#ff8080'],pur:['#1a0a30','#3a1a6a','#5e30a0','#8a5ad0','#b890f0'],nav:['#060a18','#101c38','#1e3060','#34508e','#5070b0'],blk:['#000000','#101014','#24242a','#44444e','#6a6a78'],gld:['#3a2600','#7a5400','#b88a10','#e8c030','#fff0a0'],grn:['#063018','#0f5a2a','#1f9048','#3ee07a','#a0ffc0'],tea:['#04302a','#0a6e52','#15a07a','#40d8a8','#b0fff0'],crm:['#5a5446','#8a8470','#bab4a0','#e4dece','#fffcf4'],lip:['#400818','#801830','#b83048','#e06070','#f8a0b0'],ew:['#4a4a58','#8a8a98','#c8c8d4','#f0f0f6','#ffffff'],blu:['#0a2a4a','#2a6aa0','#5aa8e0','#a0d8ff','#ffffff'],mouth:['#100000','#2a0505','#4a0a0a','#6a1414'],rh:['#3a0a04','#7a2008','#b8400e','#e0702a','#ffa860'],wood:['#2a1404','#5a3010','#8a5420','#b8803c','#e0b070'],fur:['#1e1208','#3e2614','#644022','#8e643a','#bc9460'],brn:['#140a04','#2e1a0c','#4e2e16','#704624','#98683a'],rn:['#5a1010','#a03030','#d05a4a','#f08a78','#ffc0a8'],tan:['#2a1e0c','#5a4420','#8a6c38','#b89658','#e0c488'],gsk:['#0a2a0a','#1a5a1a','#3a8a2a','#6ac040','#a8f070','#e0ffb0'],eyeb:['#000000','#0a0a14','#1a1a2a','#2a2a40']};
+const BY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+const bay=(a,b)=>BY[(b&3)*4+(a&3)]/16;
+const pk=(r,I,a,b)=>{const q=Math.round(I*(r.length-1)+(bay(a,b)-0.5)*0.9);return r[Math.max(0,Math.min(r.length-1,q))]};
+
+function paintArt(x,art){
+ const P=(a,b,c)=>{x.fillStyle=c;x.fillRect(a,b,1,1)};const Rc=(a,b,w,h,c)=>{x.fillStyle=c;x.fillRect(a,b,w,h)};
+ const S=(cx,cy,rx,ry,r,o)=>{const oc=o===0?null:(o||r[0]);const ins=(a,b)=>((a+.5-cx)/rx)**2+((b+.5-cy)/ry)**2<=1;for(let b=Math.floor(cy-ry-1);b<=cy+ry+1;b++)for(let a=Math.floor(cx-rx-1);a<=cx+rx+1;a++){if(!ins(a,b))continue;const e=!ins(a+1,b)||!ins(a-1,b)||!ins(a,b+1)||!ins(a,b-1);if(e&&oc){P(a,b,oc);continue}const u=(a+.5-cx)/rx,v=(b+.5-cy)/ry,z=Math.sqrt(Math.max(0,1-u*u-v*v));const I=0.18+0.88*Math.max(0,-0.45*u-0.5*v+0.74*z);P(a,b,pk(r,I,a,b))}};
+ const SB=(x0,y0,w,h,r,o)=>{for(let b=y0;b<y0+h;b++)for(let a=x0;a<x0+w;a++){const e=a==x0||b==y0||a==x0+w-1||b==y0+h-1;if(e&&o!==0){P(a,b,o||r[0]);continue}const u=(a-x0)/(w-1),v=(b-y0)/(h-1);P(a,b,pk(r,0.95-0.55*u-0.3*v,a,b))}};
+ const Ln=(x0,y0,x1,y1,c,t)=>{t=t||1;const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))||1;for(let i=0;i<=n;i++)Rc(Math.round(x0+(x1-x0)*i/n),Math.round(y0+(y1-y0)*i/n),t,t,c)};
+ const bgr=['#34449a','#3e50ae','#4a5ec0','#5a70cc','#6f86d6'];for(let b=0;b<72;b++)for(let a=0;a<72;a++)P(a,b,pk(bgr,0.95-b/80,a,b));
+ const O='#1a0a04';
+ const eye=(cx,cy,rx,ry,dx,dy,ir)=>{S(cx,cy,rx,ry,K.ew,O);S(cx+dx,cy+dy,Math.max(1.2,rx*0.38),Math.max(1.2,ry*0.38),ir,'#000');P(Math.round(cx+dx-1),Math.round(cy+dy-1),'#fff')};
+ const star=(a,b,c1,c2)=>{P(a,b,c1);P(a-1,b,c2);P(a+1,b,c2);P(a,b-1,c2);P(a,b+1,c2)};
+ switch(art){
+ case 'dee':
+  S(36,82,28,15,K.blk);SB(29,66,14,10,K.ew,0);for(let i=0;i<4;i++)Ln(30+i*3,67,33+i*3,75,'#c8c8d4');S(22,72,2,2,K.red);
+  S(16,38,9,16,K.rh);S(56,38,9,16,K.rh);S(36,22,23,15,K.rh);S(36,8,12,7,K.rh);
+  S(20,44,3.5,5.5,K.sk1);S(52,44,3.5,5.5,K.sk1);S(36,43,16,18,K.sk1);S(36,27,15,6,K.rh,0);
+  Ln(23,32,32,30,'#7a2008',2);Ln(40,30,49,32,'#7a2008',2);eye(28,38,5.5,6,1,0,K.blu);eye(44,38,5.5,6,-1,0,K.blu);
+  S(36,46,3.5,4,K.sk1);S(36,54,11,5,K.lip);SB(27,52,19,4,K.ew,0);Rc(27,55,19,1,'#801830');
+  Ln(52,72,63,52,'#5a3010',3);SB(55,43,16,9,K.wood);Rc(58,43,2,9,'#e8c030');Rc(66,43,2,9,'#e8c030');
+  [[48,40],[50,44],[52,38]].forEach(([a,b])=>Ln(a,b,a-3,b-1,'#fff'));star(9,10,'#fff','#ccd');star(62,20,'#fff','#ccd');break;
+ case 'samo':
+  S(36,82,31,16,K.fur);for(let i=0;i<14;i++)P(8+i*4,70+(i%3),'#bc9460');
+  S(18,44,3.5,5.5,K.sk1);S(54,44,3.5,5.5,K.sk1);S(36,44,18,17,K.sk1);S(24,53,7,6,K.sk1,0);S(48,53,7,6,K.sk1,0);
+  S(27,34,7,3.5,K.wh);S(45,34,7,3.5,K.wh);Rc(26,39,4,2,'#000');Rc(42,39,4,2,'#000');P(26,39,'#fff');P(42,39,'#fff');Ln(23,41,31,42,'#a24e2e');Ln(41,42,49,41,'#a24e2e');
+  S(36,46,5.5,5,K.rn);S(27,52,9,4,K.wh);S(45,52,9,4,K.wh);S(18,56,3,3,K.wh);S(54,56,3,3,K.wh);S(36,58,4,1.6,K.lip,0);
+  S(36,18,12,10,K.gld);SB(22,25,28,4,K.gld);Ln(47,15,56,10,'#b88a10',2);Rc(56,9,3,2,'#e8c030');SB(30,5,12,4,K.gld);S(36,4,2.5,2.5,K.red);
+  for(let i=0;i<5;i++){const a=24+i*6;Ln(a,25,a+2,21,'#e8c030');P(a+2,20,'#c22')}Rc(31,15,10,2,'#7a5400');
+  [[31,1],[29,-1],[43,2]].forEach(([a,b])=>S(a,b+2,2,2,K.wh,0));break;
+ case 'mo':
+  S(36,82,28,15,K.nav);SB(31,66,10,12,K.ew,0);SB(34,67,4,11,K.gld,0);
+  S(18,43,3.5,5.5,K.sk1);S(54,43,3.5,5.5,K.sk1);S(36,41,18,21,K.sk1);SB(18,6,36,18,K.blk);
+  Ln(23,30,28,28,'#1a9a3a',2);Ln(28,28,32,29,'#1a9a3a',2);Ln(32,29,38,25,'#1a9a3a',2);Ln(38,25,42,26,'#1a9a3a',2);Ln(42,26,49,20,'#1a9a3a',2);Ln(46,20,50,20,'#1a9a3a',1);Ln(50,20,50,24,'#1a9a3a',1);
+  SB(10,32,24,13,K.tea,K.tea[0]);SB(38,32,24,13,K.tea,K.tea[0]);Rc(34,35,4,2,K.tea[0]);Rc(5,35,5,2,K.tea[0]);Rc(62,35,5,2,K.tea[0]);
+  [[14,3],[17,5],[20,6],[23,8],[42,4],[45,5],[48,7],[51,8],[54,9]].forEach(([a,h])=>Rc(a,43-h,2,h,'#0a6e52'));
+  S(36,49,3.5,3,K.sk1);Ln(29,56,42,56,O);P(43,55,O);P(44,54,O);P(45,54,O);Ln(30,57,41,57,'#a24e2e');
+  SB(54,58,15,14,K.gry,'#111');Rc(56,60,11,3,'#9fd08f');for(let b=65;b<71;b+=2)for(let a=56;a<67;a+=3)Rc(a,b,2,1,'#e0e0e0');break;
+ case 'paper':
+  S(36,84,25,13,K.gry);SB(31,70,10,10,K.ew,0);SB(35,71,3,9,K.blu,0);
+  S(18,56,3.5,5.5,K.sk1);S(54,56,3.5,5.5,K.sk1);S(36,56,18,15,K.sk1);
+  [[14,36],[20,33],[12,35],[22,31],[16,36],[19,33],[13,37],[23,29],[17,34],[20,31]].forEach(([a,w],k)=>{const b=40-k*5;SB(a,b,w,5,K.crm,'#5a5446');Rc(a+4,b+2,w-9,1,'#8a94a8')});
+  eye(28,52,5,4.5,0,-1.5,K.blu);eye(44,52,5,4.5,0,-1.5,K.blu);S(28,49,6,3.2,K.sk1,0);S(44,49,6,3.2,K.sk1,0);Ln(22,51,34,51,O);Ln(38,51,50,51,O);
+  x.strokeStyle='#222';x.lineWidth=1;x.strokeRect(21.5,46.5,13,11);x.strokeRect(37.5,46.5,13,11);Rc(35,51,2,1,'#222');
+  S(36,61,5,6,K.sk1);for(let a=27;a<46;a++)P(a,68-((a%5)>2?1:0),O);S(13,45,1.8,3,K.blu);S(58,42,1.8,3,K.blu);S(57,63,1.5,2.6,K.blu);break;
+ case 'brass':
+  S(36,82,28,16,K.olv);for(let i=0;i<16;i++){const a=15+(i%8)*5,b=66+(i/8|0)*5;Rc(a,b,4,2,['#c22','#36c','#3a3','#e8c030'][i%4]);S(a+2,b+3.5,1.8,1.8,K.gld)}
+  S(9,64,9,4,K.gld);S(63,64,9,4,K.gld);for(let a=2;a<18;a+=2)Rc(a,67,1,3,'#b88a10');for(let a=55;a<71;a+=2)Rc(a,67,1,3,'#b88a10');
+  S(19,43,3.5,5.5,K.sk1);S(53,43,3.5,5.5,K.sk1);S(36,55,15,9,K.sk1);S(36,41,17,18,K.sk1);S(25,49,5,4,K.sk1,0);S(47,49,5,4,K.sk1,0);
+  Ln(21,31,32,34,'#3a200c',2);Ln(40,34,51,31,'#3a200c',2);S(27,39,7.5,8,K.gld);eye(27,39,5.5,6,1,0,K.grn);for(let i=0;i<14;i++)P(20-(i>>2),46+i,i%2?'#e8c030':'#b88a10');
+  Ln(40,40,50,39,O,1);Ln(40,41,49,41,'#a24e2e',1);S(36,46,5.5,5.5,K.sk1);Ln(23,52,49,52,'#a82020',1);SB(23,53,27,6,K.ew,O);for(let a=27;a<48;a+=4)Rc(a,54,1,4,'#8a8a98');Ln(23,59,49,59,'#a82020',1);
+  S(36,17,28,11,K.olv);SB(6,23,60,6,K.blk);S(36,15,5,5,K.gld);Rc(35,13,3,3,'#c22');break;
+ case 'yael':
+  S(36,84,27,14,K.pur);Ln(30,70,36,80,'#3a1a6a');Ln(42,70,36,80,'#3a1a6a');
+  [[20,30],[16,38],[18,46],[52,30],[56,38],[54,46],[26,24],[36,22],[46,24]].forEach(([a,b])=>S(a,b,6,6,K.brn));
+  S(36,45,15,17,K.sk1);[[24,30],[31,28],[38,28],[45,30]].forEach(([a,b])=>S(a,b,4,3.5,K.brn,0));
+  Ln(23,37,31,35,'#2e1a0c',2);Ln(41,35,49,37,'#2e1a0c',2);eye(28,41,5,5.5,0,-2.5,K.brn);eye(44,41,5,5.5,0,-2.5,K.brn);
+  S(36,49,3.5,3.5,K.sk1);SB(27,54,19,5,K.ew,O);for(let a=30;a<44;a+=3)Rc(a,55,1,3,'#8a8a98');
+  S(10,62,4.5,4.5,K.sk1);S(62,62,4.5,4.5,K.sk1);
+  [[8,14,K.red],[20,6,K.blu],[36,3,K.grn],[52,6,K.gld],[64,14,K.pur],[6,30,K.tea],[66,30,K.lip]].forEach(([a,b,r])=>S(a,b,3.5,3.5,r));
+  [[14,9],[28,4],[44,4],[58,9]].forEach(([a,b])=>{P(a,b,'#fff');P(a+1,b+1,'#dde')});S(14,44,1.6,2.8,K.blu);S(58,40,1.6,2.8,K.blu);break;
+ case 'smug':
+  S(36,82,30,16,K.tan);Rc(24,66,24,8,'#3a2a14');
+  SB(25,66,6,7,K.gld,'#7a5400');SB(32,67,5,6,K.blk,'#000');Rc(33,68,3,2,'#6ac0ff');S(41,70,3.5,4,['#101010','#2a2a2a','#444','#666'],'#000');SB(44,66,4,7,K.red,'#300808');
+  Ln(24,62,24,72,'#5a4420',2);Ln(48,62,48,72,'#5a4420',2);S(18,64,8,5,K.tan);S(54,64,8,5,K.tan);
+  S(20,44,3.5,5.5,K.sk2);S(52,44,3.5,5.5,K.sk2);S(36,44,16,18,K.sk2);
+  S(36,24,22,5,K.brn);S(36,19,13,8,K.brn);Rc(24,22,24,2,'#140a04');
+  S(28,38,6,3.5,K.blk,'#101014');S(44,38,6,3.5,K.blk,'#101014');Rc(34,37,4,1,'#101014');P(25,37,'#fff');P(41,37,'#fff');
+  Ln(24,34,31,35,'#140a04',2);Ln(41,35,48,34,'#140a04',2);S(36,45,3.5,4,K.sk2);
+  Ln(28,51,44,51,'#140a04',2);Ln(30,55,44,54,O);Ln(44,54,47,52,O);Rc(40,55,2,1,'#e8c030');break;
+ case 'anchor':
+  for(let b=0;b<72;b++)for(let a=0;a<72;a++)P(a,b,pk(['#0e1e5a','#16307e','#1e3a8a','#2a4ca0'],.95-b/80,a,b));
+  SB(4,4,18,9,K.red,'#300808');[[7,6],[8,6],[7,7],[7,8],[8,8],[9,8],[9,7],[12,6],[12,7],[12,8],[13,6],[14,7],[14,8],[17,6],[17,7],[17,8],[18,6],[19,7],[19,8]].forEach(([a,b])=>P(a,b+1,'#fff'));
+  S(36,84,28,15,K.nav);SB(31,66,10,10,K.ew,0);SB(34,67,4,11,K.red,0);
+  S(21,44,3.5,5.5,K.sk1);S(51,44,3.5,5.5,K.sk1);S(36,43,15,17,K.sk1);
+  S(36,27,18,10,K.brn);S(26,33,6,4,K.brn,0);Ln(27,20,42,17,'#c09060',2);Ln(30,24,40,22,'#98683a');
+  Ln(24,35,33,34,'#2e1a0c',2);Ln(39,34,48,35,'#2e1a0c',2);eye(30,40,4.5,4.5,0,0,K.blu);eye(42,40,4.5,4.5,0,0,K.blu);
+  S(36,47,3.5,3.5,K.sk1);SB(26,52,21,6,K.ew,O);for(let a=29;a<45;a+=3)Rc(a,53,1,4,'#c8c8d4');P(31,53,'#fff');
+  Ln(60,72,58,58,'#24242a',2);S(58,55,3.5,4,K.blk);for(let b=53;b<58;b+=2)Rc(56,b,5,1,'#6a6a78');break;
+ case 'alien':
+  for(let b=0;b<72;b++)for(let a=0;a<72;a++)P(a,b,pk(['#05050f','#0a0a20','#141432','#1e1e4a'],.95-b/80,a,b));
+  [[6,8],[62,6],[10,30],[64,28],[4,52],[66,50],[20,4],[52,14]].forEach(([a,b])=>star(a,b,'#fff','#558'));
+  S(36,84,26,14,K.gry);SB(22,66,28,4,K.gld);
+  Ln(30,14,24,4,'#3a8a2a');S(24,4,2.2,2.2,K.gld);Ln(42,14,48,4,'#3a8a2a');S(48,4,2.2,2.2,K.red);
+  S(36,52,10,10,K.gsk);S(36,34,20,20,K.gsk);
+  S(26,37,7.5,4.5,K.eyeb,'#000');S(46,37,7.5,4.5,K.eyeb,'#000');P(23,35,'#fff');P(24,35,'#ccf');P(43,35,'#fff');P(44,35,'#ccf');
+  P(35,47,'#1a5a1a');P(37,47,'#1a5a1a');Ln(33,55,39,55,'#0a2a0a');
+  SB(52,54,15,17,K.crm,'#5a5446');Rc(56,52,7,3,'#9096a0');for(let b=58;b<70;b+=3)Rc(54,b,10,1,'#8a94a8');P(55,58,'#3ee07a');P(55,61,'#e04040');break;
+ }
+}
+function paintOverlay(x,state){
+ if(state==='hit'){
+  let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  for(let i=0;i<150;i++){const a=14+Math.floor(r()*44),b=18+Math.floor(r()*46);x.fillStyle=r()<.5?'rgba(20,12,8,.8)':'rgba(70,46,34,.65)';x.fillRect(a,b,1,1)}
+  [[14,10,5],[22,5,4],[58,12,5],[50,4,3]].forEach(([a,b,rr])=>{for(let yy=-rr;yy<=rr;yy++)for(let xx=-rr;xx<=rr;xx++)if(xx*xx+yy*yy<=rr*rr&&((xx+yy)&1)){x.fillStyle='rgba(96,96,108,.9)';x.fillRect(a+xx,b+yy,1,1)}});
+  [[12,40],[60,36],[58,48],[14,52]].forEach(([a,b])=>{x.fillStyle='#e0f4ff';x.fillRect(a,b,1,1);x.fillStyle='#a0d8ff';x.fillRect(a-1,b+1,3,2);x.fillStyle='#2a6aa0';x.fillRect(a-1,b+3,3,1)});
+ }
+ if(state==='gloat'){
+  [[6,6],[64,8],[8,60],[64,62],[36,3]].forEach(([a,b])=>{x.fillStyle='#fff0a0';x.fillRect(a,b,1,1);x.fillStyle='#e8c030';[[-1,0],[1,0],[0,-1],[0,1]].forEach(([u,v])=>x.fillRect(a+u,b+v,1,1));x.fillStyle='rgba(255,240,160,.6)';[[-2,0],[2,0],[0,-2],[0,2]].forEach(([u,v])=>x.fillRect(a+u,b+v,1,1))});
+ }
+}
+function dmgLevel(key){if(!G.nations||key[0]==='_')return 0;const n=G.nations.find(o=>o.key===key);if(!n)return 0;if(!n.alive)return 3;const r=n.pop/n.startPop;return r>.7?0:r>.45?1:r>.25?2:3}
+const EYEL={dee:[28,38],samo:[27,37],mo:[29,38],paper:[28,52],brass:[45,40],yael:[28,41],smug:[28,38],custom:[28,40]};
+function paintDamage(x,lvl,art){if(!lvl)return;const P=(a,b,c)=>{x.fillStyle=c;x.fillRect(a,b,1,1)};let sd=11;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
+ for(let i=0;i<45*lvl;i++){const a=14+Math.floor(r()*44),b=24+Math.floor(r()*40);P(a,b,r()<.5?'rgba(25,15,10,.75)':'rgba(70,45,30,.6)')}
+ x.fillStyle='#e8c090';x.fillRect(40,27,9,3);x.fillStyle='#c09060';x.fillRect(43,27,3,3);x.fillStyle='#a07040';x.fillRect(44,28,1,1);
+ P(17,40,'#e0f4ff');x.fillStyle='#a0d8ff';x.fillRect(16,41,3,2);x.fillStyle='#5aa8e0';x.fillRect(17,43,1,1);
+ if(lvl>=2){const [ex,ey]=EYEL[art]||EYEL.custom;for(let a=-7;a<=7;a++)for(let b=-6;b<=6;b++){const d=a*a/49+b*b/36;if(d<=1&&d>.5)P(ex+a,ey+b,((a+b)&1)?'#6a3080':'#3a1a50')}
+  x.fillStyle='#f4f4f4';x.fillRect(14,30,44,4);x.fillStyle='#c8c8c8';x.fillRect(14,33,44,1);x.fillStyle='#d02020';x.fillRect(20,30,3,3);x.fillStyle='#f4f4f4';x.fillRect(54,32,4,6);x.fillRect(57,36,3,3)}
+ if(lvl>=3){for(let i=0;i<140;i++){const a=10+Math.floor(r()*52),b=2+Math.floor(r()*24);if(r()<.55)P(a,b,'rgba(30,25,25,.85)')}
+  [[22,8,5],[34,4,6],[48,9,5],[40,14,4]].forEach(([a,b,rr])=>{for(let yy=-rr;yy<=rr;yy++)for(let xx=-rr;xx<=rr;xx++)if(xx*xx+yy*yy<=rr*rr&&((xx+yy)&1))P(a+xx,b+yy,'rgba(120,120,130,.9)')});
+  for(let i=0;i<22;i++){P(48+i,62-Math.round(i*1.3),'rgba(255,255,255,.75)');if(i%5===2)P(49+i,61-Math.round(i*1.3)-2,'rgba(255,255,255,.6)')}}}
+const MOUTH={anchor:[36,55,8,3],dee:[36,55,8,3.5],samo:[36,59,4.5,2.5],mo:[36,57,6,2.5],paper:[36,68,7,2.5],brass:[36,56,11,3],yael:[36,57,8,3],smug:[37,55,6,2.5],alien:[36,55,3.5,2],custom:[36,58,7,3]};
+function artOf(key){if(key==='__alien')return'alien';if(key==='__anchor')return'anchor';if(key==='__news')return null;const L=byL(key);return L?(L.custom?'custom':L.art):null}
+const pcache={};
+const NEWSCV=(()=>{const c=document.createElement('canvas');c.width=c.height=72;const x=c.getContext('2d');const cols=['#e8e8e8','#e8e040','#40d8e0','#40d040','#d040d0','#d04040','#4040d0'];cols.forEach((cl,i)=>{x.fillStyle=cl;x.fillRect(i*72/7,0,72/7+1,48)});x.fillStyle='#111';x.fillRect(0,48,72,24);x.fillStyle='#f4d34a';x.fillRect(10,56,52,8);x.fillStyle='#111';for(let i=0;i<5;i++)x.fillRect(14+i*10,58,6,4);return c})();
+function portrait(key,state){
+ if(key==='__news')return NEWSCV;
+ const L=byL(key),lvl=dmgLevel(key); const k=key+'|'+state+'|'+(L&&L.customV||0)+'|'+lvl;
+ if(pcache[k]) return pcache[k];
+ const c=document.createElement('canvas');c.width=c.height=72;const x=c.getContext('2d');
+ if(L&&L.custom){ x.fillStyle='#4a5ec0';x.fillRect(0,0,72,72); const im=L.custom, sc=Math.max(72/im.width,72/im.height); x.imageSmoothingEnabled=true; x.drawImage(im,(72-im.width*sc)/2,(72-im.height*sc)/2,im.width*sc,im.height*sc) }
+ else paintArt(x,L?L.art:(key==='__anchor'?'anchor':'alien'));
+ paintOverlay(x,state);paintDamage(x,lvl,artOf(key));
+ return pcache[k]=c;
+}
+function drawMouth(x,key,f){
+ const art=artOf(key);if(!art)return;const [cx,cy,rx,ry]=MOUTH[art]||MOUTH.custom;const h=ry*(f===2?1:.55);
+ for(let b=Math.floor(cy-h-1);b<=cy+h+1;b++)for(let a=Math.floor(cx-rx-1);a<=cx+rx+1;a++){const u=(a+.5-cx)/rx,v=(b+.5-cy)/h,d=u*u+v*v;if(d>1)continue;let c='#2a0505';if(d>.7)c='#1a0a04';else if(v>.3)c='#c04050';else if(v<-.4&&f===2)c='#f0f0f6';x.fillStyle=c;x.fillRect(a,b,1,1)}
+}
+function drawFace(cv,key,state,f){if(!cv)return;const x=cv.getContext('2d');x.imageSmoothingEnabled=false;x.clearRect(0,0,72,72);x.drawImage(portrait(key,state||'idle'),0,0);if(f)drawMouth(x,key,f)}
+
+/* ---------- audio: sound effects + chiptune music ---------- */
+const AU={ctx:null,sfx:null,mus:null,noise:null,sound:true,music:true,timer:null,next:0,step:0};
+function ac(){try{if(!AU.ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;const c=new C();AU.ctx=c;const comp=c.createDynamicsCompressor();comp.connect(c.destination);AU.sfx=c.createGain();AU.sfx.gain.value=.6;AU.sfx.connect(comp);AU.mus=c.createGain();AU.mus.gain.value=.13;AU.mus.connect(comp);const len=c.sampleRate*2,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;AU.noise=b}if(AU.ctx.state==='suspended')AU.ctx.resume();return AU.ctx}catch(e){return null}}
+function tone(o){const c=AU.ctx,t=o.t??c.currentTime,osc=c.createOscillator(),g=c.createGain();osc.type=o.type||'square';osc.frequency.setValueAtTime(o.f,t);if(o.f2)osc.frequency.exponentialRampToValueAtTime(o.f2,t+(o.glide||o.dur));let node=osc;if(o.filter){const fl=c.createBiquadFilter();fl.type=o.filter;fl.frequency.value=o.ft||1000;fl.Q.value=o.q||.7;osc.connect(fl);node=fl}node.connect(g);g.connect(o.dest||AU.sfx);const v=o.vol??.2,a=o.attack||.005;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+o.dur);if(o.vib){const l=c.createOscillator(),lg=c.createGain();l.frequency.value=o.vib;lg.gain.value=o.vibD||20;l.connect(lg);lg.connect(osc.frequency);l.start(t);l.stop(t+o.dur+.05)}osc.start(t);osc.stop(t+o.dur+.05)}
+function noise(o){const c=AU.ctx,t=o.t??c.currentTime,s=c.createBufferSource();s.buffer=AU.noise;s.loop=true;const fl=c.createBiquadFilter();fl.type=o.filter||'lowpass';fl.frequency.setValueAtTime(o.ft||1000,t);if(o.ft2)fl.frequency.exponentialRampToValueAtTime(o.ft2,t+o.dur);fl.Q.value=o.q||.7;const g=c.createGain();s.connect(fl);fl.connect(g);g.connect(o.dest||AU.sfx);const v=o.vol??.3;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+(o.attack||.005));g.gain.exponentialRampToValueAtTime(.0001,t+o.dur);s.start(t,Math.random());s.stop(t+o.dur+.05)}
+function sfx(k,arg){if(!AU.sound||!ac())return;const t=AU.ctx.currentTime;try{switch(k){
+ case 'blip':tone({type:'square',f:880,dur:.06,vol:.07});break;
+ case 'click':tone({type:'square',f:660,f2:990,dur:.07,vol:.08});break;
+ case 'launch':noise({filter:'bandpass',ft:300,ft2:2600,q:1.2,dur:1.2,vol:.35,attack:.08});tone({type:'sawtooth',f:80,f2:560,dur:1.1,vol:.12,filter:'lowpass',ft:1400});noise({filter:'lowpass',ft:200,dur:1,vol:.45});break;
+ case 'boom':{const m=arg||20,big=Math.min(1,m/100),d=1.6+big*2;noise({filter:'lowpass',ft:1900,ft2:50,dur:d,vol:.75+big*.25,attack:.01});tone({type:'sine',f:110,f2:26,dur:d*.85,vol:.75});noise({filter:'highpass',ft:2500,dur:.3,vol:.35});for(let i=0;i<7;i++)noise({t:t+.15+Math.random()*d*.6,filter:'bandpass',ft:500+Math.random()*1600,q:3,dur:.08,vol:.16});break}
+ case 'small':noise({filter:'lowpass',ft:1300,ft2:100,dur:.6,vol:.45});tone({type:'sine',f:170,f2:50,dur:.4,vol:.4});break;
+ case 'intercept':tone({type:'square',f:1700,f2:380,dur:.25,vol:.12});noise({t:t+.05,filter:'highpass',ft:1500,dur:.35,vol:.28});break;
+ case 'shield':tone({type:'sine',f:300,f2:1400,dur:.9,vol:.18,vib:12,vibD:30,attack:.1});[880,1109,1319,1760].forEach((f,i)=>tone({t:t+i*.12,type:'triangle',f,dur:.35,vol:.08}));break;
+ case 'build':[0,.18,.36,.54].forEach(d=>{tone({t:t+d,type:'square',f:210,f2:130,dur:.08,vol:.14,filter:'bandpass',ft:900,q:3});noise({t:t+d,filter:'bandpass',ft:3400,q:2,dur:.05,vol:.22})});noise({t:t+.75,filter:'bandpass',ft:5000,q:1,dur:.4,vol:.12});tone({t:t+1.2,type:'square',f:523,dur:.1,vol:.08});tone({t:t+1.3,type:'square',f:784,dur:.2,vol:.08});break;
+ case 'oil':for(let i=0;i<6;i++)tone({t:t+i*.11,type:'sine',f:320-i*30,f2:110-i*8,dur:.12,vol:.22});noise({t:t+.6,filter:'lowpass',ft:900,ft2:180,dur:1,vol:.32,attack:.05});break;
+ case 'prop':[523,659,784,1047].forEach((f,i)=>tone({t:t+i*.1,type:'square',f,dur:.12,vol:.09,filter:'lowpass',ft:2500}));tone({t:t+.45,type:'square',f:784,dur:.1,vol:.09});tone({t:t+.55,type:'square',f:1047,dur:.35,vol:.09});break;
+ case 'ally':tone({type:'sine',f:659,dur:.6,vol:.18});tone({t:t+.15,type:'sine',f:988,dur:.9,vol:.16});tone({t:t+.3,type:'triangle',f:1319,dur:.7,vol:.07});break;
+ case 'reject':tone({type:'square',f:140,dur:.5,vol:.12,filter:'lowpass',ft:900});tone({type:'square',f:148,dur:.5,vol:.1,filter:'lowpass',ft:900});break;
+ case 'betray':[880,740,622,523,415,330].forEach((f,i)=>tone({t:t+i*.1,type:'sawtooth',f,dur:.14,vol:.08,filter:'lowpass',ft:2000}));break;
+ case 'siren':tone({type:'triangle',f:620,dur:2.4,vol:.2,vib:2.2,vibD:240,attack:.1});break;
+ case 'ufo':tone({type:'sine',f:700,f2:1150,glide:1.4,dur:1.7,vol:.12,vib:7,vibD:60,attack:.2});tone({type:'sine',f:1400,f2:900,glide:1.4,dur:1.7,vol:.05,vib:9,vibD:90,attack:.2});break;
+ case 'beam':noise({filter:'bandpass',ft:2400,q:4,dur:1.1,vol:.13,attack:.2});tone({type:'sine',f:400,f2:1600,dur:1.1,vol:.08,vib:20,vibD:40});break;
+ case 'laser':tone({type:'square',f:1900,f2:260,dur:.2,vol:.1});break;
+ case 'alarm':[0,.25,.5].forEach(d=>{tone({t:t+d,type:'square',f:880,dur:.12,vol:.08});tone({t:t+d+.12,type:'square',f:660,dur:.12,vol:.08})});break;
+ case 'plane':tone({type:'sawtooth',f:68,f2:92,dur:2.6,vol:.08,filter:'lowpass',ft:420,attack:.3});break;
+ case 'crash':tone({type:'sawtooth',f:620,f2:70,dur:.9,vol:.1});break;
+ case 'win':[523,659,784,1047,784,1047].forEach((f,i)=>tone({t:t+i*.14,type:'square',f,dur:.2,vol:.1,filter:'lowpass',ft:3000}));break;
+ case 'beep':tone({type:'square',f:1040,dur:.14,vol:.1});break;
+ case 'sneak':[0,.2,.4,.6,.8].forEach((d,i)=>tone({t:t+d,type:'triangle',f:[262,311,262,349,330][i],dur:.09,vol:.12}));break;
+ case 'fuse':noise({filter:'highpass',ft:5000,dur:.8,vol:.12});break;
+ case 'pop':tone({type:'sine',f:950,f2:180,dur:.14,vol:.2});noise({filter:'highpass',ft:3000,dur:.06,vol:.2});break;
+ case 'confetti':tone({type:'sawtooth',f:300,f2:640,dur:.5,vol:.1,vib:9,vibD:25,filter:'lowpass',ft:2400});for(let i=0;i<5;i++)noise({t:t+.3+i*.06,filter:'highpass',ft:4000,dur:.04,vol:.15});break;
+ case 'fire':noise({filter:'lowpass',ft:700,dur:1.8,vol:.32,attack:.2});noise({filter:'bandpass',ft:2000,q:3,dur:1.6,vol:.06,attack:.2});break;
+ case 'static':noise({filter:'bandpass',ft:3000,q:.6,dur:1.2,vol:.16});break;
+ case 'moo':tone({type:'sawtooth',f:170,f2:120,dur:1,vol:.13,filter:'lowpass',ft:700,vib:5,vibD:6,attack:.08});break;
+ case 'aah':for(let i=0;i<4;i++)tone({t:t+i*.05,type:'triangle',f:900+i*140,f2:600+i*90,dur:.4,vol:.04,vib:9,vibD:30});break;
+ case 'stomp':tone({type:'sine',f:90,f2:35,dur:.3,vol:.6});noise({filter:'lowpass',ft:400,dur:.25,vol:.35});tone({type:'square',f:160,f2:110,dur:.06,vol:.06,filter:'bandpass',ft:900,q:3});break;
+ case 'zapbeam':noise({filter:'bandpass',ft:1800,q:2,dur:1.6,vol:.18,attack:.1});tone({type:'sawtooth',f:220,f2:880,dur:1.6,vol:.08,vib:16,vibD:40,filter:'lowpass',ft:2400});break;
+ case 'news':[784,659,523,784].forEach((f,i)=>tone({t:t+i*.13,type:'triangle',f,dur:.22,vol:.12}));tone({t:t+.55,type:'square',f:1047,dur:.4,vol:.07,filter:'lowpass',ft:2400});break;
+ case 'lose':[392,370,349,330,311,294].forEach((f,i)=>tone({t:t+i*.2,type:'triangle',f,dur:.3,vol:.15}));break;
+ }}catch(e){}}
+/* chipmunk mumble voices: each leader has a pitch, waveform, glide, wobble and pace */
+const VOICE={
+ america:{f:540,w:'square',glide:-.28,rng:.22,len:.9,vol:.06},          // bossy, clipped, falling verdicts
+ russia:{f:330,w:'sawtooth',glide:-.12,vib:7,vibD:30,rng:.12,len:1.7,vol:.06}, // slow, wobbly, gravelly
+ china:{f:640,w:'square',glide:0,rng:.01,len:.7,vol:.05,robot:1},       // flat robotic staccato
+ europe:{f:440,w:'triangle',glide:-.4,vib:3,vibD:8,rng:.06,len:1.4,vol:.08,nasal:1}, // nasal, sighing
+ nk:{f:820,w:'square',glide:.4,rng:.38,len:.75,vol:.06},               // shrill, excited
+ israel:{f:720,w:'triangle',glide:.18,vib:6,vibD:30,rng:.45,len:.55,vol:.08}, // rapid chatter
+ iran:{f:500,w:'sawtooth',glide:.25,vib:4,vibD:20,rng:.3,len:1,vol:.045,breath:1}, // sly whisper
+ __alien:{f:980,w:'sine',glide:.6,vib:28,vibD:140,rng:.5,len:1,vol:.08},
+ __anchor:{f:400,w:'triangle',glide:-.12,vib:2,vibD:6,rng:.1,len:1.1,vol:.08},
+ __news:{f:580,w:'triangle',glide:-.05,rng:.12,len:1,vol:.07}};
+const FORM={a:[800,1200],e:[420,2200],i:[300,2700],o:[480,850],u:[340,750],y:[300,2500]};
+function mumble(key,vowel){
+ if(!AU.sound||!ac())return;const now=performance.now();if(now-(mumble.last||0)<48)return;mumble.last=now;
+ try{const v=VOICE[key]||VOICE.__news,c=AU.ctx,t=c.currentTime,dur=.08*(v.len||1)*(G.fast?.75:1),f0=v.f*(1+rnd(-v.rng,v.rng));
+  const o=c.createOscillator();o.type=v.w;o.frequency.setValueAtTime(f0,t);o.frequency.linearRampToValueAtTime(f0*(1+(v.glide||0)),t+dur);
+  if(v.vib){const l=c.createOscillator(),lg=c.createGain();l.frequency.value=v.vib;lg.gain.value=v.vibD||20;l.connect(lg);lg.connect(o.frequency);l.start(t);l.stop(t+dur+.03)}
+  const [F1,F2]=FORM[vowel]||FORM.a,k=v.robot?1.2:1.6,g=c.createGain(),b1=c.createBiquadFilter(),b2=c.createBiquadFilter(),dry=c.createGain();
+  b1.type=b2.type='bandpass';b1.frequency.value=F1*k;b2.frequency.value=F2*k;b1.Q.value=v.nasal?10:4;b2.Q.value=v.nasal?14:5;dry.gain.value=.18;
+  o.connect(b1);o.connect(b2);o.connect(dry);b1.connect(g);b2.connect(g);dry.connect(g);g.connect(AU.sfx);
+  const vol=(v.vol||.06)*5;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.008);g.gain.setValueAtTime(vol,t+dur*.6);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.start(t);o.stop(t+dur+.03);if(v.breath)noise({filter:'bandpass',ft:3200,q:2,dur,vol:.04})}catch(e){}}
+function consonant(){if(!AU.sound||!AU.ctx)return;try{noise({filter:'highpass',ft:5000,dur:.03,vol:.05})}catch(e){}}
+function voice(k){mumble(k,pick(['a','o','e']))}
+const mtf=m=>440*Math.pow(2,(m-69)/12);
+const MEL_P={0:[2,12],6:[1,12],8:[3,12],12:[2,12],14:[1,12]},MEL_W={0:0,3:7,6:12,8:10,10:7,12:3,14:5};
+function musStep(t,s,war){
+ const bar=s>>4,st=s&15,M=AU.mus;
+ const prog=war?[[50,0],[46,1],[48,1],[45,1]]:[[57,0],[53,1],[48,1],[55,1]];
+ const [r,maj]=prog[bar],ch=[0,maj?4:3,7,12];
+ if(st%2===0)tone({t,dest:M,type:'square',f:mtf(r-24+(st%4===2?12:0)),dur:.13,vol:.5,filter:'lowpass',ft:700});
+ if(war||st%2===0)tone({t,dest:M,type:'square',f:mtf(r+12+ch[(war?st:st>>1)%4]),dur:.08,vol:.14,filter:'lowpass',ft:2600});
+ if(war){if(MEL_W[st]!==undefined)tone({t,dest:M,type:'triangle',f:mtf(r+12+MEL_W[st]),dur:.22,vol:.32})}
+ else if(MEL_P[st]){const [i,o]=MEL_P[st];tone({t,dest:M,type:'triangle',f:mtf(r+o+ch[i]),dur:.35,vol:.28})}
+ if(st===0||st===8||(war&&st===10))tone({t,dest:M,type:'sine',f:150,f2:40,dur:.18,vol:.9});
+ if(war&&(st===4||st===12)){noise({t,dest:M,filter:'bandpass',ft:1800,dur:.12,vol:.45});tone({t,dest:M,type:'triangle',f:200,f2:120,dur:.08,vol:.3})}
+ if(war||st%4===2)noise({t,dest:M,filter:'highpass',ft:7000,dur:.03,vol:war?(st%2?.08:.16):.1});
+}
+function musicTick(){const c=AU.ctx;if(!c||!AU.music)return;const war=!!(G.nations&&G.war&&!$('#scrGame').hidden);const sp=60/(war?140:112)/4;if(AU.next<c.currentTime)AU.next=c.currentTime+.02;while(AU.next<c.currentTime+.15){try{musStep(AU.next,AU.step,war)}catch(e){}AU.next+=sp;AU.step=(AU.step+1)%64}}
+function musStart(){if(!AU.music||AU.timer||!ac())return;AU.next=AU.ctx.currentTime+.05;AU.step=0;AU.timer=setInterval(musicTick,30)}
+function musStop(){clearInterval(AU.timer);AU.timer=null}
+document.addEventListener('pointerdown',()=>{if(ac()&&AU.music)musStart()});
+
+/* ---------- map ---------- */
+const MW=320,MH=160;
+const mapC=$('#map'), mx=mapC.getContext('2d');
+const base=document.createElement('canvas');base.width=MW;base.height=MH;const bx=base.getContext('2d');
+let LAND=[];
+const BLOBS=[[55,40,35,22],[72,62,18,14],[38,28,20,10],[88,24,16,8],[112,14,10,6],[82,78,6,6],[76,72,5,4],[96,100,16,22],[100,86,14,10],[92,126,8,12],[155,38,16,10],[145,32,6,8],[165,26,10,7],[140,36,4,5],[160,86,20,22],[168,70,22,12],[166,110,12,14],[186,68,12,8],[190,78,8,8],[215,30,45,14],[252,34,30,14],[238,58,25,16],[226,68,12,10],[214,80,8,10],[256,86,10,6],[286,50,3,8],[272,56,3,5],[276,120,18,11],[176,64,4,4],[268,98,10,4],[300,40,14,8]];
+function isLand(a,b){const w=0.14*Math.sin(a*.7+b*.3)*Math.cos(b*.5+a*.11);for(const [cx,cy,rx,ry] of BLOBS){const u=(a-cx)/rx,v=(b-cy)/ry;if(u*u+v*v<=1+w)return true}return false}
+function buildBase(){
+ LAND=[];for(let b=0;b<MH;b++){LAND[b]=[];for(let a=0;a<MW;a++)LAND[b][a]=isLand(a,b)}
+ const land=(a,b)=>a>=0&&b>=0&&a<MW&&b<MH&&LAND[b][a];
+ const ocean=['#0e1a40','#132458','#193070','#203c86'], grn=['#16361a','#22502a','#2f6a30','#3f8a3a','#5aa84a'], sand=['#5a4420','#8a6a30','#b08a44','#d0ae60'], ice=['#8a94b0','#c8d0e0','#e8eef8'];
+ for(let b=0;b<MH;b++)for(let a=0;a<MW;a++){
+  let c;
+  if(LAND[b][a]){
+   const coast=!land(a+1,b)||!land(a-1,b)||!land(a,b+1)||!land(a,b-1);
+   if(coast)c='#0c1c10';
+   else{const n=0.5+0.28*Math.sin(a*.21+b*.13)*Math.cos(a*.07-b*.19);
+    if(b<13||b>148)c=pk(ice,.6+n*.3,a,b);
+    else if((a>146&&a<205&&b>60&&b<86)||(a>30&&a<60&&b>44&&b<58))c=pk(sand,n,a,b);
+    else c=pk(grn,n*.9,a,b)}
+  }else{
+   const near=land(a+1,b)||land(a-1,b)||land(a,b+1)||land(a,b-1);
+   if(near)c='#2a4c9a';
+   else if((a%40===0||b%40===0)&&((a+b)&1))c='#233e8a';
+   else c=pk(ocean,.45+.25*Math.sin(a*.05+b*.08),a,b);
+  }
+  bx.fillStyle=c;bx.fillRect(a,b,1,1);
+ }
+}
+function scorch(x,y,r){for(let b=Math.floor(y-r);b<=y+r;b++)for(let a=Math.floor(x-r);a<=x+r;a++){const d=Math.hypot(a-x,b-y);if(d>r)continue;if(d<r*.35)bx.fillStyle='#5a2010';else if(((a+b)&1)||d<r*.6)bx.fillStyle='#2a1a14';else continue;bx.fillRect(a,b,1,1)}}
+const px=(a,b,c)=>{mx.fillStyle=c;mx.fillRect(Math.round(a),Math.round(b),1,1)};
+function ell(cx,cy,rx,ry,c1,c2){for(let b=Math.floor(cy-ry);b<=cy+ry;b++)for(let a=Math.floor(cx-rx);a<=cx+rx;a++){const u=(a+.5-cx)/rx,v=(b+.5-cy)/ry;if(u*u+v*v>1)continue;mx.fillStyle=(c2&&(v>.2||((a+b)&1)&&u>.3))?c2:c1;mx.fillRect(a,b,1,1)}}
+function ring(cx,cy,rx,ry,c){mx.fillStyle=c;const n=Math.max(24,Math.round((rx+ry)*3));for(let i=0;i<n;i++){const t=i/n*Math.PI*2;mx.fillRect(Math.round(cx+Math.cos(t)*rx),Math.round(cy+Math.sin(t)*ry),1,1)}}
+function lineP(x0,y0,x1,y1,c,skip){const n=Math.max(1,Math.round(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));for(let i=0;i<=n;i++){if(skip&&skip(i))continue;px(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c)}}
+function stamp(x,y,a,list){const c=Math.cos(a),s=Math.sin(a);for(const [i,j,col] of list){mx.fillStyle=col;mx.fillRect(Math.round(x+c*i-s*j),Math.round(y+s*i+c*j),1,1)}}
+let clock=0;
+function drawCity(x,y,ok,col,i){
+ if(ok){const H=[4,6,3];mx.fillStyle='#08080e';mx.fillRect(x-4,y+1,8,1);for(let k=0;k<3;k++){const b0=x-3+k*2,h=H[(k+i)%3];mx.fillStyle='#14141c';mx.fillRect(b0,y+1-h,2,h);mx.fillStyle=col;mx.fillRect(b0,y+1-h,2,1);if(h>3){mx.fillStyle=(Math.floor(clock*.7+k*1.3+i*2)%3)?'#fff0a0':'#4a4a30';mx.fillRect(b0+(k&1),y+3-h,1,1)}}}
+ else{mx.fillStyle='#2a1410';mx.fillRect(x-3,y-1,6,2);mx.fillStyle='#5a3a24';mx.fillRect(x-2,y-2,1,1);mx.fillRect(x+1,y-2,2,1);const f=Math.floor(clock*9+i*3)%3;mx.fillStyle=f?'#ff9a30':'#ffd040';mx.fillRect(x-1+f%2,y-3-(f>1?1:0),1,2);if(R()<.02)part({x,y:y-3,vx:rnd(-2,2),vy:rnd(-7,-4),life:1.6,s0:1,s1:3,cols:['#5a5a64','#3a3a42'],fade:true})}}
+function drawPerson(x,y,col,spin){x=Math.round(x);y=Math.round(y);if(spin){mx.fillStyle='#f0c090';mx.fillRect(x-2,y-2,1,2);mx.fillStyle=col;mx.fillRect(x-1,y-2,2,2);mx.fillStyle='#202028';mx.fillRect(x+1,y-2,1,2)}else{mx.fillStyle='#f0c090';mx.fillRect(x,y-4,2,1);mx.fillStyle=col;mx.fillRect(x,y-3,2,2);mx.fillStyle='#202028';mx.fillRect(x,y-1,1,1);mx.fillRect(x+1,y-1,1,1)}}
+function drawCow(x,y,flip){x=Math.round(x);y=Math.round(y);mx.fillStyle='#f4f4f4';mx.fillRect(x-2,y-3,5,2);mx.fillStyle='#111';mx.fillRect(x-1,y-3,1,1);mx.fillRect(x+1,y-2,1,1);mx.fillStyle='#f0a0a0';mx.fillRect(x+3,y-3+(flip?1:0),1,1);mx.fillStyle='#333';const ly=flip?y-4:y-1;mx.fillRect(x-2,ly,1,1);mx.fillRect(x+2,ly,1,1)}
+function spawnAmbient(){
+ if(R()<.55){const y=rnd(14,140),right=R()<.5,x0=right?-8:MW+8,x1=right?MW+8:-8;anim(10,p=>{const X=Math.round(x0+(x1-x0)*p),Y=Math.round(y+Math.sin(p*6)*2);mx.fillStyle='#e8eef8';mx.fillRect(X-2,Y,5,1);mx.fillRect(X,Y-1,1,3);mx.fillStyle='#ff4040';mx.fillRect(X+(right?2:-2),Y,1,1);if(R()<.3)part({x:X-(right?3:-3),y:Y,life:1.4,cols:['#ffffff','#c8d0e0'],fade:true})});return}
+ for(let k=0;k<20;k++){const x=rnd(10,MW-40),y=Math.round(rnd(20,150)),right=R()<.5;if([0,10,20,30].every(d=>LAND[y]&&!LAND[y][Math.round(x+d)])){anim(14,p=>{const X=Math.round(right?x+p*30:x+30-p*30);mx.fillStyle='#6a4020';mx.fillRect(X-2,y,5,1);mx.fillStyle='#c4c8d0';mx.fillRect(X-1,y-1,3,1);mx.fillStyle='#e04040';mx.fillRect(X,y-2,1,1);if(R()<.25)part({x:X-(right?3:-3),y:y+1,life:.9,cols:['#a0c0ff','#6080d0'],fade:true})});return}}}
+function drawPumpjack(x,y,ph,sea){
+ if(sea){mx.fillStyle='#6a6a78';mx.fillRect(x-4,y,9,2);mx.fillStyle='#3a3a44';mx.fillRect(x-3,y+2,1,2);mx.fillRect(x+3,y+2,1,2)}
+ mx.fillStyle='#24242a';mx.fillRect(x-3,y-1,7,1);mx.fillStyle='#6a6a78';mx.fillRect(x,y-5,1,4);
+ const a=Math.sin(ph)*.35;for(let i=-4;i<=3;i++)px(x+Math.cos(a)*i,y-6+Math.sin(a)*i,'#e8c030');
+ const hx=Math.round(x+Math.cos(a)*-4),hy=Math.round(y-6+Math.sin(a)*-4);mx.fillStyle='#b88a10';mx.fillRect(hx-1,hy,1,2);mx.fillStyle='#101014';mx.fillRect(hx-1,hy+2,1,Math.max(1,y-1-(hy+2)));
+}
+function drawTV(x,y,ph){x=Math.round(x);y=Math.round(y);mx.fillStyle='#202026';mx.fillRect(x-5,y-4,11,8);const cols=['#e8e8e8','#e8e040','#40d8e0','#40d040','#d040d0','#d04040'];for(let i=0;i<9;i++){mx.fillStyle=cols[(i+Math.floor(ph*8))%6];mx.fillRect(x-4+i,y-3,1,6)}mx.fillStyle='#9096a0';mx.fillRect(x-3,y-6,1,2);mx.fillRect(x+3,y-6,1,2);mx.fillRect(x-2,y-5,1,1);mx.fillRect(x+2,y-5,1,1)}
+function drawMissile(x,y,a,col){
+ const fl=Math.floor(clock*30)%2,L=[];
+ for(let i=-10;i<=-7;i++)L.push([i,0,(i+fl)%2?'#ffd040':'#ff7020']);
+ L.push([-7,1,'#ff7020'],[-7,-1,'#ff7020'],[-8,fl?1:-1,'#ffd040']);
+ [[-6,2],[-6,-2],[-5,2],[-5,-2],[-6,1],[-6,-1]].forEach(([i,j])=>L.push([i,j,'#a82020']));
+ for(let i=-6;i<=4;i++){L.push([i,0,'#ffffff']);L.push([i,1,'#a8acb8']);L.push([i,-1,'#dfe2ea'])}
+ L.push([1,0,col],[1,1,col],[1,-1,col],[0,0,col],[0,1,col],[0,-1,col]);
+ L.push([5,0,'#e04040'],[6,0,'#ff6060'],[5,1,'#a82020'],[5,-1,'#e04040'],[7,0,'#ffffff']);
+ stamp(x,y,a,L);
+}
+function drawInterceptor(x,y,a){stamp(x,y,a,[[2,0,'#ffffff'],[1,0,'#ffffff'],[0,0,'#a0f0ff'],[-1,0,'#40c0ff'],[0,1,'#40c0ff'],[0,-1,'#40c0ff'],[-2,0,'#ffd040']])}
+function drawBomber(x,y,right,col){const d=right?1:-1,P=(i,j,c)=>{mx.fillStyle=c;mx.fillRect(Math.round(x)+i*d,Math.round(y)+j,1,1)};
+ for(let i=-6;i<=6;i++)P(i,0,'#c4c8d0');P(7,0,'#ffffff');for(let i=-5;i<=5;i++)P(i,1,'#6a6f7c');
+ for(let j=-5;j<=5;j++)P(0,j,'#9096a0');P(1,-5,'#9096a0');P(1,5,'#9096a0');P(-1,-4,'#6a6f7c');P(-1,4,'#6a6f7c');
+ P(-6,-1,'#9096a0');P(-6,-2,'#9096a0');P(-5,-1,'#9096a0');P(-6,2,'#9096a0');
+ P(2,0,col);P(3,0,col);P(2,1,col);P(5,-1,'#6ac0ff');P(4,-1,'#6ac0ff');
+}
+const patC={};
+function pat(c1,c2){const k=c1+c2;if(patC[k])return patC[k];const c=document.createElement('canvas');c.width=c.height=2;const x=c.getContext('2d');x.fillStyle=c1;x.fillRect(0,0,2,2);x.fillStyle=c2;x.fillRect(0,0,1,1);x.fillRect(1,1,1,1);return patC[k]=mx.createPattern(c,'repeat')}
+function blob(cx,cy,rx,ry,fill){if(rx<.6||ry<.6)return;mx.fillStyle=fill;for(let b=Math.floor(cy-ry);b<=Math.ceil(cy+ry);b++){const v=(b+.5-cy)/ry;if(v*v>=1)continue;const w=rx*Math.sqrt(1-v*v);mx.fillRect(Math.round(cx-w),b,Math.max(1,Math.round(w*2)),1)}}
+/* fire-to-smoke palettes: [shadow, body, light, highlight] */
+const FIRE=[['#ff9a20','#ffd060','#fff6c0','#ffffff'],['#d04010','#ff8a20','#ffd060','#fff6c0'],['#7a2010','#c04010','#ff8a20','#ffd060'],['#4a2a24','#7a4030','#b06040','#e09060'],['#3a3434','#5a4a48','#8a7468','#b8a090'],['#2a2a2e','#44444c','#6a6a74','#9090a0']];
+function stageCols(q){const f=Math.max(0,Math.min(FIRE.length-1.001,q*(FIRE.length-1))),i=Math.floor(f);return FIRE[f-i>.5?i+1:i]}
+function puff(cx,cy,r,C,ry){ry=ry||r;blob(cx,cy+r*.12,r,ry,pat(C[0],C[1]));blob(cx-r*.16,cy-r*.1,r*.8,ry*.76,C[1]);blob(cx-r*.3,cy-r*.28,r*.48,ry*.44,pat(C[2],C[1]));blob(cx-r*.4,cy-r*.42,r*.2,ry*.18,C[3])}
+function mushroom(x,y,s,q,face,t){
+ const C=stageCols(q*.9),Cs=stageCols(Math.min(1,q*.9+.22)),e=1-Math.pow(1-Math.min(1,q*1.5),2),R=s*(.75+q*.55),pr=s*(.48+q*.18);
+ const capY=y-Math.min(s*2.7*e,Math.max(s*.9,y-s*1.3*.78));
+ blob(x,y,s*(1.3+q*1.3),s*(.32+q*.2),pat(Cs[0],Cs[1]));blob(x-s*.2,y-s*.08,s*(.95+q*.9),s*(.2+q*.13),Cs[1]);
+ const sw=s*(.32+q*.12);for(let yy=y-sw*.5;yy>capY+R*.3;yy-=Math.max(2,sw*.6)){const k=(y-yy)/(y-capY+1),wob=Math.sin(yy*.35+t*5)*sw*.25;puff(x+wob,yy,sw*(1-k*.25),k<.5?Cs:C)}
+ if(q>.15&&q<.6){mx.save();mx.globalAlpha*=1-(q-.15)/.45;ring(x,capY+R*.95+s*.5,R*(1.1+q),Math.max(2,R*.22),'#ffffff');mx.restore()}
+ const N=9,back=[],front=[];for(let i=0;i<N;i++){const a=i/N*Math.PI*2+t*1.6,pp=[x+Math.cos(a)*R,capY+Math.sin(a)*R*.42,pr*(Math.sin(a)<0?.85:1)];(Math.sin(a)<0?back:front).push(pp)}
+ const Cb=stageCols(Math.min(1,q*.9+.12));back.forEach(p=>puff(p[0],p[1],p[2],Cb));
+ puff(x,capY-R*.2,R*.95,C,R*.62);front.forEach(p=>puff(p[0],p[1],p[2],C));puff(x,capY-R*.55,R*.55,C,R*.4);
+ if(q<.5){mx.save();mx.globalAlpha*=1-q*2;blob(x,capY+R*.28,R*.75,R*.2,'#ffd060');mx.restore()}
+ if(face&&q>.28){const fy=capY-R*.15,ex=R*.34,eh=Math.max(1.6,R*.13),D='#1a0a04';
+  if(face==='smile'){blob(x-ex,fy,eh*.8,eh,D);blob(x+ex,fy,eh*.8,eh,D);px(x-ex-eh*.25,fy-eh*.45,'#fff');px(x+ex-eh*.25,fy-eh*.45,'#fff');for(let i=-12;i<=12;i++){const u=i/12;px(x+u*R*.5,fy+R*.3+(1-u*u)*R*.2,D);px(x+u*R*.5,fy+R*.31+(1-u*u)*R*.2+1,D)}blob(x-ex*1.5,fy+R*.25,eh*.9,eh*.5,'#e86a70');blob(x+ex*1.5,fy+R*.25,eh*.9,eh*.5,'#e86a70')}
+  else{blob(x-ex,fy,eh*1.2,eh*1.3,D);blob(x+ex,fy,eh*1.2,eh*1.3,D);blob(x,fy+eh*1.6,eh*.5,eh*.7,D);for(let i=-3;i<=3;i++){mx.fillStyle=D;mx.fillRect(Math.round(x+i*eh*.7),Math.round(fy+eh*2.7),1,Math.max(2,Math.round(eh*1.2)))}}}
+}
+function flingDebris(x,y,s,n){for(let i=0;i<n;i++){const kind=pick(['cow','cow','person','person','car','toilet']);let X=x,Y=y,VX=rnd(-1,1)*s*2.4,VY=-rnd(1.4,2.4)*s*1.5;const g=s*2.3;anim(2.4,(p,dt)=>{VY+=g*dt;X+=VX*dt;Y+=VY*dt;const sp=Math.floor(p*16+i)%2;if(kind==='cow')drawCow(X,Y,sp);else if(kind==='person')drawPerson(X,Y,'#e0e0e0',sp);else if(kind==='car'){mx.fillStyle='#e04040';mx.fillRect(Math.round(X)-2,Math.round(Y)-2-sp,5,2);px(X-1,Y,'#222');px(X+2,Y,'#222')}else{mx.fillStyle='#f4f4f4';mx.fillRect(Math.round(X)-1,Math.round(Y)-3,2,2);mx.fillRect(Math.round(X)-1,Math.round(Y)-1,3,1)}})}}
+const BOOMWORDS_BIG=['KA-BLOOEY!','MEGA BOOM!','BADABOOM!','OH NO!','YIKES!','WHOOPSIE!','KAPOW-ZA!','HOLY SMOKES!','THAT LEFT A MARK!','OOPSIE DAISY!'];
+const BOOMWORDS=['KABOOM!','BOOM!','KER-POW!','FWOOSH!','WHAM!','BLAM!','BONK!','KA-CHUNK!'];
+const REVIEWS=["★★★★★ 'Very loud.' – the neighbours",'State TV rating: 11 out of 10','Judges: 9.8 · 9.9 · 10.0',"★☆☆☆☆ 'Ruined my picnic.'",'Visible from space. Aliens filed a complaint.','NEW PERSONAL BEST!',"Seismologists: 'wow.'",'Cows: unimpressed','Insurance: denied','Weather forecast: mushroomy'];
+
+/* ---------- fx engine ---------- */
+let ents=[],parts=[];
+function anim(dur,fn){const d=Math.max(.05,dur*spd());return new Promise(res=>{let t=0;ents.push(dt=>{t+=dt;const p=Math.min(1,t/d);fn(p,dt);if(p>=1){res();return false}return true})})}
+function part(o){parts.push(Object.assign({age:0,g:0,vx:0,vy:0,s0:1,s1:1,fade:false,life:1},o))}
+function arc(A,B,h){const d=Math.hypot(B[0]-A[0],B[1]-A[1]);return{A,B,C:[(A[0]+B[0])/2,Math.max(6,Math.min(A[1],B[1])-d*(h??.45))]}}
+function at(p,t){const u=1-t;return[u*u*p.A[0]+2*u*t*p.C[0]+t*t*p.B[0],u*u*p.A[1]+2*u*t*p.C[1]+t*t*p.B[1]]}
+function dirA(p,t){const u=1-t;return Math.atan2(2*u*(p.C[1]-p.A[1])+2*t*(p.B[1]-p.C[1]),2*u*(p.C[0]-p.A[0])+2*t*(p.B[0]-p.C[0]))}
+function fly(path,dur,stop,draw){stop=stop||1;return anim(dur*stop,(p,dt)=>{const t=p*stop,[x,y]=at(path,t);draw(x,y,dirA(path,t),t,dt)}).then(()=>({pos:at(path,stop),ang:dirA(path,stop)}))}
+function smoke(x,y,a,n){for(let i=0;i<(n||2);i++)part({x:x-Math.cos(a)*10+rnd(-1,1),y:y-Math.sin(a)*10+rnd(-1,1),vx:rnd(-3,3),vy:rnd(-4,0),life:rnd(1.1,1.7),s0:1,s1:4,cols:['#ffffff','#d0d0da','#9a9aa8','#6a6a78'],fade:true})}
+function floatT(x,y,txt,col,comic){const d=document.createElement('div');d.className='floater'+(comic?' comic':'')+(comic==='huge'?' huge':'');d.textContent=txt;d.style.left=(Math.max(comic?28:6,Math.min(MW-(comic?28:6),x))/MW*100)+'%';d.style.top=(Math.max(comic?14:6,y)/MH*100)+'%';d.style.color=col||'#fff';d.style.animationDuration=(1.9*spd())+'s';$('#floaters').appendChild(d);setTimeout(()=>d.remove(),2000*spd()+200)}
+let zoomN=0;const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function zoomIn(x,y,s){if(RM)return;zoomN++;const b=$('.mapbox');b.style.transformOrigin=`${x/MW*100}% ${y/MH*100}%`;b.style.transform=`scale(${s||1.5})`}
+function zoomOut(){zoomN=Math.max(0,zoomN-1);if(!zoomN)$('.mapbox').style.transform=''}
+function cutin(keys,title,subt,style,btn){const box=$('#cutin');box.innerHTML='';const d=document.createElement('div');d.className='ci '+(style||'');d.style.animationDuration=(1.9*spd())+'s';
+ const st=style==='dark'?'hit':'gloat';keys.forEach((k,i)=>{const cv=document.createElement('canvas');cv.width=cv.height=72;cv.className='px';drawFace(cv,k,st,0);d.appendChild(cv);if(i===0&&keys.length>1){const h=document.createElement('span');h.className='ct';h.textContent=style==='gold'?'+':'VS';d.appendChild(h)}});
+ if(btn){const b=document.createElement('div');b.className='bigbtn';b.style.animationDuration=(1.9*spd())+'s';d.appendChild(b)}
+ const tx=document.createElement('div');tx.innerHTML=`<div class="ct">${esc(title)}</div>${subt?`<div class="cs">${esc(subt)}</div>`:''}`;d.appendChild(tx);box.appendChild(d);
+ const cvs=[...d.querySelectorAll('canvas')];let f=0;const iv=setInterval(()=>{f++;cvs.forEach((cv,i)=>drawFace(cv,keys[i],st,[0,1,2,1][(f+i)%4]));if(f%2)voice(keys[f%keys.length])},95);
+ return sleep(1900).then(()=>{clearInterval(iv);d.remove()})}
+function panic(x,y,col){sfx('aah');floatT(x,y-6,pick(['AAAH!','EEK!','RUN!','MY LAWN!']),'#ffffff');for(let i=0;i<8;i++){const a=R()*Math.PI*2,sp=rnd(8,16);anim(1.6,p=>{drawPerson(x+Math.cos(a)*sp*p*1.6,y+Math.sin(a)*sp*p*.8,col,Math.floor(p*16+i)%4===0)})}}
+function ouch(n){if(!n.$row)return;n.$row.classList.remove('ouch');void n.$row.offsetWidth;n.$row.classList.add('ouch')}
+function shake(big){const w=$('#mapwrap');w.classList.remove('shake','shake2');void w.offsetWidth;w.classList.add(big?'shake2':'shake')}
+function banner(t,red){const b=$('#banner');b.textContent=t;b.classList.toggle('red',!!red);b.classList.add('show');clearTimeout(banner._t);banner._t=setTimeout(()=>b.classList.remove('show'),2200*spd()+600)}
+const ufo={on:false,x:0,y:0,beam:0,beamLen:14};
+function drawUfo(){if(!ufo.on)return;const x=Math.round(ufo.x),y=Math.round(ufo.y+Math.sin(clock*4));
+ if(ufo.beam>0){mx.globalAlpha=.4*ufo.beam;for(let j=2;j<=ufo.beamLen;j++){const w=2+Math.floor(j*.38);mx.fillStyle=(j+Math.floor(clock*20))%3?'#c0ff90':'#f0ffd0';mx.fillRect(x-w,y+j,w*2+1,1)}mx.globalAlpha=1}
+ ell(x,y-2,3.5,2.6,'#a0e8ff','#4aa8e0');ell(x,y,8.5,2.4,'#c4c8d0','#6a6f7c');
+ const lc=['#ff4040','#40ff60','#ffe040','#40c0ff'];for(let i=-6;i<=6;i+=3)px(x+i,y,lc[((i/3)+Math.floor(clock*8)+8)&3]);}
+function frame(now){
+ const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;clock+=dt;
+ mx.drawImage(base,0,0);
+ if(G.nations){const tgt=Math.min(1,G.mt/700+(G.war?Math.max(0,G.turn-PEACE_TURNS-1)*.012:0));G.doom=(G.doom||0)+(tgt-(G.doom||0))*Math.min(1,dt*.6);
+  if(G.doom>.01){mx.save();mx.globalCompositeOperation='multiply';mx.fillStyle=doomTint(G.doom);mx.fillRect(0,0,MW,MH);mx.restore()}
+  if(G.fallout&&G.fallout.length){G.fallout=G.fallout.filter(f=>{f.x+=4*dt;f.y+=Math.sin(clock*.5+f.x*.05)*.6*dt;f.a-=dt/45;if(f.a<=0)return false;mx.save();mx.globalAlpha=f.a*.4;blob(f.x,f.y,f.r,f.r*.45,pat('#7a9a5a','#4a5a44'));blob(f.x+f.r*.4,f.y-f.r*.15,f.r*.6,f.r*.3,'#8aa86a');mx.restore();return true})}}
+ if(G.nations){
+  for(const k of G.allies){const [a,b]=k.split('|').map(byN);if(a&&b&&a.alive&&b.alive){mx.globalAlpha=.7;lineP(a.pos[0],a.pos[1],b.pos[0],b.pos[1],'#f4d34a',i=>((i+Math.floor(clock*8))%4)>1);mx.globalAlpha=1}}
+  for(const n of G.nations){
+   for(let i=0;i<Math.min(3,n.rigs);i++){const s=n.rigSpots[i];drawPumpjack(s[0],s[1],clock*3+i*1.7+n.pos[0],s[2])}
+   if(n.alive&&n.abm>0){const r=8+Math.min(n.abm,5),[cx,cy]=n.pos;mx.globalAlpha=.4;mx.fillStyle='#a0f0ff';for(let i=0;i<=30;i++){if((i+Math.floor(clock*6))%3===0)continue;const t=Math.PI*i/30;mx.fillRect(Math.round(cx-Math.cos(t)*r),Math.round(cy+4-Math.sin(t)*r*.85),1,1)}mx.globalAlpha=1}
+   const ok=n.alive?Math.min(3,Math.ceil(3*n.pop/n.startPop)):0;n.spread.forEach((o,i)=>drawCity(n.pos[0]+o[0],n.pos[1]+o[1],i<ok,n.color,i));
+   if(n.$hit>0){n.$hit-=dt;}
+   if(n===G.player&&n.alive&&(clock%1)<.6){mx.fillStyle='#f4d34a';const [x,y]=n.pos;[[-13,-10,3,1],[-13,-10,1,3],[11,-10,3,1],[13,-10,1,3],[-13,9,3,1],[-13,7,1,3],[11,9,3,1],[13,7,1,3]].forEach(r=>mx.fillRect(x+r[0],y+r[1],r[2],r[3]))}
+  }
+ }
+ if(G.nations){for(const c of G.craters){const f=Math.floor(clock*8+c.x)%3;for(let k=0;k<3;k++)px(c.x+Math.round(Math.sin(c.x+k*2.1)*c.s),c.y+Math.round(Math.cos(c.y+k*1.7)*c.s*.4),(f+k)%3?'#ff7020':'#ffd040');if(R()<.04)part({x:c.x+rnd(-c.s,c.s),y:c.y-2,vx:rnd(-2,2),vy:rnd(-8,-4),life:2,s0:1,s1:4,cols:['#5a5a64','#3a3a42','#2a2a30'],fade:true})}
+  if(!$('#scrGame').hidden&&R()<dt*.22)spawnAmbient()}
+ ents=ents.filter(e=>e(dt));
+ parts=parts.filter(p=>{p.age+=dt;if(p.age>=p.life)return false;p.vy+=p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;const f=p.age/p.life,s=Math.max(1,Math.round(p.s0+(p.s1-p.s0)*f));if(p.fade)mx.globalAlpha=Math.max(0,1-f);mx.fillStyle=p.cols[Math.min(p.cols.length-1,Math.floor(f*p.cols.length))];mx.fillRect(Math.round(p.x-s/2),Math.round(p.y-s/2),s,s);mx.globalAlpha=1;return true});
+ drawUfo();
+ if(G.nations&&!G.winter&&(G.doom||0)>.35){const n=Math.floor(FLAKES.length*Math.min(1,(G.doom-.35)/.5));mx.fillStyle='#9a8f98';for(let i=0;i<n;i++){const f=FLAKES[i];f.y+=f.v*.5*dt;f.x+=Math.sin(clock*.7+f.v)*dt*6;if(f.y>MH){f.y=0;f.x=R()*MW}mx.fillRect(Math.round(f.x),Math.round(f.y),1,1)}}
+ if(G.winter){mx.fillStyle='rgba(170,180,205,.16)';mx.fillRect(0,0,MW,MH);mx.fillStyle='#e8eef8';for(const f of FLAKES){f.y+=f.v*dt;f.x+=Math.sin(clock+f.v)*dt*4;if(f.y>MH){f.y=0;f.x=R()*MW}mx.fillRect(Math.round(f.x),Math.round(f.y),1,1)}}
+ if(G.flash>0){mx.fillStyle=`rgba(255,250,230,${Math.min(.9,G.flash)})`;mx.fillRect(0,0,MW,MH);G.flash-=dt*2.2}
+ requestAnimationFrame(frame);
+}
+function doomTint(d){const st=[[255,255,255],[255,205,160],[210,120,125],[130,80,120]],f=d*(st.length-1),i=Math.min(st.length-2,Math.floor(f)),t=f-i;return 'rgb('+st[i].map((v,k)=>Math.round(v+(st[i+1][k]-v)*t)).join(',')+')'}
+const FLAKES=Array.from({length:70},()=>({x:R()*MW,y:R()*MH,v:6+R()*10}));
+
+/* ---------- fx library ---------- */
+async function boom(x,y,mt,opts){
+ opts=opts||{};const s=8+mt/4.2,big=mt>=50,dur=big?4.6:3.4;G.flash=Math.max(G.flash,Math.min(.95,.35+mt/80));shake(mt>=20);sfx(mt<10?'small':'boom',mt);
+ if(big&&!RM){const w=$('#mapwrap');w.style.filter='invert(1)';setTimeout(()=>w.style.filter='brightness(1.9) saturate(1.7)',90);setTimeout(()=>w.style.filter='',300)}
+ if(mt>=10)floatT(x,y-Math.min(s*2.4,y-10),pick(big?BOOMWORDS_BIG:BOOMWORDS),null,big?'huge':true);
+ if(big)setTimeout(()=>floatT(x,Math.max(16,y-s*1.2),pick(REVIEWS),'#ffffff'),1800*spd());
+ const zoom=big&&!opts.noZoom;if(zoom)zoomIn(x,y,1.3);
+ const face=mt>=20&&R()<.45?(R()<.6?'smile':'skull'):null;
+ for(let i=0;i<30+mt;i++)part({x,y,vx:rnd(-1,1)*s*7,vy:rnd(-1.6,.2)*s*6,g:50,life:rnd(.8,1.8),s0:2,s1:1,cols:['#ffffff','#fff0a0','#ffb040','#e05a20','#5a2a10']});
+ if(mt>=20)flingDebris(x,y,s,big?6:3);
+ await anim(dur,p=>{const tt=p*dur;
+  if(p<.55){mx.save();mx.globalAlpha=1-p/.55;ring(x,y,s*(1.4+p*22),s*(.5+p*8),p<.15?'#ffffff':'#ffe0b0');ring(x,y,s*(1+p*16),s*(.4+p*6),'#ffb040');if(big)ring(x,y,s*(.6+p*30),s*(.3+p*11),'#d8c8a0');mx.restore()}
+  if(p<.14){const r=s*1.6*Math.sqrt(p/.14)+1;blob(x,y-r*.3,r,r,pat('#fff6c0','#ffffff'));blob(x,y-r*.3,r*.7,r*.7,'#ffffff')}
+  else{const q=(p-.14)/.86;mx.save();mx.globalAlpha=q>.8?(1-q)/.2:1;mushroom(x,y,s,q,face,tt);mx.restore()}
+  if(p>.1&&p<.7&&R()<.8)part({x:x+rnd(-s,s)*.4,y:y-rnd(0,s),vx:rnd(-4,4),vy:rnd(-30,-10),life:rnd(.5,1),s0:2,s1:1,cols:['#fff0a0','#ffb040','#e05a20']});
+ });
+ if(zoom)setTimeout(zoomOut,150);
+ for(let i=0;i<18;i++)part({x:x+rnd(-s,s)*.8,y:y-s*1.6+rnd(-4,4),vx:rnd(-4,4),vy:rnd(-7,-2),life:rnd(1.8,3.2),s0:4,s1:10,cols:['#6a6a78','#4a4a54','#2a2a30'],fade:true});
+ scorch(x,y,Math.min(12,s*.45));if(mt>=20&&G.fallout&&G.fallout.length<12)G.fallout.push({x,y:y-s,r:Math.min(22,s*.8),a:1});if(mt>=10)G.craters.push({x:Math.round(x),y:Math.round(y),s:Math.min(7,s*.3),t:3});
+}
+async function walkers(F,T,count,c1,c2,lift){
+ const path=lift?null:arc(F,T,.18),ps=[];
+ for(let i=0;i<count;i++){ps.push(sleep(i*80).then(()=>{const off=[rnd(-3,3),rnd(-2,2)],sx=F[0]+rnd(-5,5);return anim(lift?1.4:2.2,p=>{let x,y;if(lift){x=sx+(T[0]-sx)*p+Math.sin(p*12+i)*1.2;y=F[1]+(T[1]-F[1])*p}else{const q=at(path,p);x=q[0]+off[0];y=q[1]+off[1]-Math.abs(Math.sin(p*30+i))*1.5}x=Math.round(x);y=Math.round(y);const leg=Math.floor(p*40)%2;mx.fillStyle='#f0c090';mx.fillRect(x,y-4,2,1);mx.fillStyle=p<.5?c1:c2;mx.fillRect(x,y-3,2,2);mx.fillStyle='#202028';if(lift){mx.fillRect(x-1,y-3,1,1);mx.fillRect(x+2,y-3,1,1);mx.fillRect(x,y-1,2,1)}else{mx.fillRect(x+leg,y-1,1,1);mx.fillRect(x+1-leg,y,1,1)}})}))}
+ await Promise.all(ps);
+}
+async function propFx(n,T,count){sfx('prop');
+ const bb=anim(2.9,p=>{const bx0=Math.round(T.pos[0]-10),by0=Math.max(1,Math.round(T.pos[1]-36)),pop=Math.min(1,p*5);mx.fillStyle='#3a3a44';mx.fillRect(bx0+4,by0+21,1,13);mx.fillRect(bx0+15,by0+21,1,13);mx.fillStyle=(Math.floor(clock*8)%2)?'#f4d34a':'#ff4060';mx.fillRect(bx0-1,by0-1+Math.round((1-pop)*10),22,22*pop|0);if(pop>=1){mx.imageSmoothingEnabled=true;mx.drawImage(portrait(n.key,'gloat'),bx0,by0,20,20);mx.imageSmoothingEnabled=false}if(R()<.25)part({x:bx0+rnd(0,20),y:by0+20,vy:-10,life:.8,cols:['#ff4060','#ff90a0'],fade:true})});floatT(T.pos[0],T.pos[1]-14,pick(['FREE SNACKS!','BETTER TV!','FREE WI-FI!','NO MONDAYS!','FREE HATS!','FREE PARKING!']),'#3ee07a');
+ const tv=anim(2.8,p=>{const [x,y]=n.pos;drawTV(x-11,y-12,p*20);for(let k=0;k<3;k++){const r=((p*3+k/3)%1)*34;mx.globalAlpha=Math.max(0,1-r/34);ring(x-11,y-12,r,r*.6,'#3ee07a');mx.globalAlpha=1}});
+ await Promise.all([tv,bb,walkers(T.pos,n.pos,Math.min(26,Math.max(6,count*2)),T.color,n.color)]);}
+async function shieldFx(n,add){sfx('shield');const [cx,cy]=n.pos,gy=cy+4;floatT(cx,cy-18,'+'+add+' DEFENSE','#a0f0ff');
+ await anim(1.8,p=>{const r=4+18*Math.min(1,p/.3),a=p<.75?1:1-(p-.75)/.25;
+  mx.globalAlpha=.3*a;for(let b=Math.floor(gy-r*.85);b<=gy;b++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const u=(x-cx)/r,v=(gy-b)/(r*.85);if(u*u+v*v>1)continue;if(((x+b+Math.floor(clock*14))%4)===0){mx.fillStyle='#a0f0ff';mx.fillRect(x,b,1,1)}}
+  mx.globalAlpha=a;for(let i=0;i<=60;i++){const t=Math.PI*i/60;px(cx-Math.cos(t)*r,gy-Math.sin(t)*r*.85,(i+Math.floor(clock*20))%7?'#a0f0ff':'#ffffff')}mx.globalAlpha=1});}
+async function buildFx(n,items){sfx('build');const x=n.pos[0]+8,y=n.pos[1]+3;
+ await anim(1.6,()=>{const h=12;for(let i=0;i<h;i++){mx.fillStyle=i%2?'#e8c030':'#b88a10';mx.fillRect(x,y-i,1,1);mx.fillRect(x+2,y-i,1,1);if(i%2)mx.fillRect(x+1,y-i,1,1)}for(let i=-7;i<=3;i++)px(x+1+i,y-12,'#e8c030');const hx=x-5+Math.round(Math.sin(clock*3));for(let j=-11;j<=-5;j++)px(hx,y+j,'#202028');mx.fillStyle='#c4c8d0';mx.fillRect(hx-1,y-4,3,1);if(R()<.6)part({x:hx+rnd(-1,1),y:y-3,vx:rnd(-25,25),vy:rnd(-35,-5),g:90,life:.45,cols:['#ffffff','#fff0a0','#ffb040']})});
+ for(const it of items){floatT(x-4,y-14,it.label,'#f4d34a');
+  await anim(.9,p=>{if(it.kind==='missile'){drawMissile(x-5,y-4-p*10,-Math.PI/2,n.color);smoke(x-5,y-4-p*10,-Math.PI/2,1)}else if(it.kind==='bomber')drawBomber(x-4+p*26,y-4-p*14,true,n.color);else{const r=3+Math.sin(p*20);ell(x-4,y-6,r,r,'#e8c030','#b88a10');px(x-4,y-6,'#000');px(x-5,y-7,'#000');px(x-3,y-7,'#000');px(x-4,y-4,'#000');ring(x-4,y-6,r+2+p*4,r+2+p*4,'#fff0a0')}})}}
+function drawDerrick(x,y,h){for(let i=0;i<h;i++){const hw=Math.round(3*(1-i/12));mx.fillStyle=i%3===0?'#b88a10':'#e8c030';mx.fillRect(x-hw,y-i,1,1);mx.fillRect(x+hw,y-i,1,1);if(i%3===0)for(let k=-hw;k<=hw;k++)mx.fillRect(x+k,y-i,1,1)}if(h>=12)px(x,y-12,'#ff4040')}
+async function drillFx(n,add){sfx('oil');const s=n.rigSpots[Math.min(n.rigs,2)],[x,y]=s;
+ await anim(1,p=>drawDerrick(x,y,Math.ceil(p*12)));
+ floatT(x,y-16,'+'+add+' OIL','#ffb040');
+ await anim(1.1,()=>{drawDerrick(x,y,12);for(let i=0;i<3;i++)part({x,y:y-12,vx:rnd(-16,16),vy:rnd(-70,-35),g:95,life:rnd(.8,1.3),s0:2,s1:1,cols:['#101014','#2a2018','#4a3a20']})});
+ if(n.rigs<3)n.rigs++;}
+async function allyFx(A,B,ok){sfx(ok?'ally':'reject');const a=A.pos,b=B.pos,m=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+ await anim(.9,p=>{const q=ok?p:Math.min(1,p*1.6)*.5;lineP(a[0],a[1],a[0]+(b[0]-a[0])*q,a[1]+(b[1]-a[1])*q,ok?'#f4d34a':'#ff8a7a',i=>i%3===2)});
+ if(ok){const H=[' XX XX ','XXXXXXX','XXXXXXX',' XXXXX ','  XXX  ','   X   '];floatT(m[0],m[1]-10,'ALLIANCE!','#f4d34a');
+  await anim(1.1,p=>{const sc=p<.3?Math.ceil(p/.3*2):2;lineP(a[0],a[1],b[0],b[1],'#f4d34a',i=>i%3===2);H.forEach((row,j)=>[...row].forEach((ch,i)=>{if(ch==='X'){mx.fillStyle=(i+j)%3?'#ff4060':'#ff90a0';mx.fillRect(Math.round(m[0]+(i-3)*sc),Math.round(m[1]-8+j*sc),sc,sc)}}));if(R()<.4)part({x:m[0]+rnd(-6,6),y:m[1]+rnd(-6,2),vy:-12,life:.6,cols:['#fff0a0','#f4d34a']})})}
+ else{const e=[a[0]+(b[0]-a[0])*.5,a[1]+(b[1]-a[1])*.5];floatT(e[0],e[1]-10,'NOPE','#ff8a7a');await anim(.8,()=>{lineP(a[0],a[1],e[0],e[1],'#ff8a7a',i=>i%3===2);for(let k=-3;k<=3;k++){px(e[0]+k,e[1]+k,'#ff3030');px(e[0]+k,e[1]-k,'#ff3030')}})}}
+async function betrayFx(A,B){sfx('betray');const a=A.pos,b=B.pos;floatT((a[0]+b[0])/2,(a[1]+b[1])/2-10,'BETRAYAL!','#ff6a55');
+ await anim(.9,p=>lineP(a[0],a[1],b[0],b[1],Math.floor(p*12)%2?'#ff3030':'#f4d34a'));
+ for(let i=0;i<30;i++){const t=R();part({x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,vx:rnd(-8,8),vy:rnd(-12,0),g:40,life:rnd(.6,1),cols:['#f4d34a','#ff6a55','#801818']})}}
+function ufoTo(tx,ty,dur){const sx=ufo.x,sy=ufo.y;return anim(dur,p=>{const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;ufo.x=sx+(tx-sx)*e;ufo.y=sy+(ty-sy)*e})}
+function ufoEnter(tx,ty,dur){ufo.on=true;ufo.beam=0;ufo.x=tx<MW/2?-14:MW+14;ufo.y=Math.max(6,ty-rnd(10,25));sfx('ufo');return ufoTo(tx,ty,dur)}
+async function ufoLeave(){sfx('ufo');await ufoTo(ufo.x<MW/2?-20:MW+20,-14,1.1);ufo.on=false;ufo.beam=0}
+
+/* ---------- sabotage fx ---------- */
+const QMARK=[' XX','  X',' X ','   ',' X '];
+async function spyFx(n,T){sfx('sneak');const path=arc(n.pos,T.pos,.12),box=R()<.5;
+ await anim(2.8,p=>{const q=Math.min(1,Math.max(0,p+Math.sin(p*Math.PI*8)*.025)),[x,y]=at(path,q),X=Math.round(x),Y=Math.round(y),hop=Math.floor(p*30)%2;
+  if(box){mx.fillStyle='#6a4020';mx.fillRect(X-3,Y-5,7,5);mx.fillStyle='#b8803c';mx.fillRect(X-3,Y-5,7,1);mx.fillRect(X-1,Y-3,3,1);if(Math.sin(p*18)>.5){mx.fillStyle='#fff';mx.fillRect(X-2,Y-6,1,1);mx.fillRect(X+1,Y-6,1,1)}}
+  else{mx.fillStyle='#1a1a1a';mx.fillRect(X-2,Y-7,5,1);mx.fillRect(X-1,Y-8,3,1);mx.fillStyle='#f0c090';mx.fillRect(X,Y-6,2,1);mx.fillStyle='#b89658';mx.fillRect(X-1,Y-5,3,3);mx.fillStyle='#202028';mx.fillRect(X-1+hop,Y-2,1,1);mx.fillRect(X+1-hop,Y-2,1,1);mx.fillStyle='#000';mx.fillRect(X+2,Y-6,1,1)}
+  if(Math.floor(p*6)%2)QMARK.forEach((r,j)=>[...r].forEach((c,i)=>{if(c==='X')px(X-1+i,Y-15+j,'#ffffff')}))});}
+async function siloFx(T){const x=T.pos[0]+6,y=T.pos[1]+2;sfx('fuse');
+ await anim(.9,p=>{mx.fillStyle='#c01010';mx.fillRect(x-1,y-3,3,3);mx.fillStyle='#fff';mx.fillRect(x-1,y-2,3,1);px(x+1+p*3,y-4-p*3,R()<.5?'#fff200':'#ff8000');if(R()<.6)part({x:x+1+p*3,y:y-4-p*3,vx:rnd(-12,12),vy:rnd(-12,4),life:.3,cols:['#fff200','#ff8000']})});
+ floatT(x,y-12,pick(['FZZZT!','KA-BLAM!','WHOOPS!']),null,true);let ex=x,ey=y;
+ await Promise.all([boom(x,y,8),anim(1.6,p=>{const a=p*16,r=p*24;ex=x+Math.cos(a)*r;ey=y-p*34+Math.sin(a)*r*.5;drawMissile(ex,ey,a+Math.PI/2,'#888');smoke(ex,ey,a+Math.PI/2,1)})]);
+ sfx('confetti');for(let i=0;i<40;i++)part({x:ex,y:ey,vx:rnd(-30,30),vy:rnd(-30,10),g:30,life:rnd(.8,1.5),cols:[pick(['#ff4060','#40c0ff','#fff200','#3ee07a','#ff8000'])]})}
+async function oilFireFx(T){const s=T.rigSpots[Math.max(0,Math.min(2,T.rigs-1))],[x,y]=s;sfx('fire');floatT(x,y-14,pick(['WHOOSH!','OOPS!','SIZZLE!']),null,true);
+ await anim(2.2,p=>{drawDerrick(x+Math.round(Math.sin(p*20)*p),y,12);for(let i=0;i<3;i++)part({x:x+rnd(-4,4),y:y-rnd(0,8),vx:rnd(-4,4),vy:rnd(-30,-14),life:rnd(.4,.8),s0:2,s1:1,cols:['#fff0a0','#ffb040','#e05a20']});if(R()<.5)part({x:x+rnd(-3,3),y:y-12,vx:rnd(-3,3),vy:rnd(-12,-6),life:2.2,s0:2,s1:7,cols:['#24242a','#101014'],fade:true})})}
+async function confettiFx(T){const [x,y]=T.pos;sfx('confetti');floatT(x,y-22,'TA-DA!',null,true);
+ await anim(.7,p=>{const r=3+p*2;ell(x,y-12-p*4,r,r,'#e8c030','#b88a10');px(x,y-12-p*4,'#000')});
+ for(let i=0;i<80;i++)part({x,y:y-16,vx:rnd(-40,40),vy:rnd(-50,0),g:35,life:rnd(1,2),cols:[pick(['#ff4060','#40c0ff','#fff200','#3ee07a','#ff8000','#ffffff'])]});await sleep(900)}
+async function shieldPopFx(T){const [cx,cy]=T.pos;await anim(1,p=>{if(Math.floor(p*14)%2)for(let i=0;i<=40;i++){const t=Math.PI*i/40;px(cx-Math.cos(t)*18,cy+4-Math.sin(t)*15,'#a0f0ff')}});sfx('pop');floatT(cx,cy-20,'POP!',null,true);for(let i=0;i<40;i++){const t=Math.PI*R();part({x:cx-Math.cos(t)*18,y:cy+4-Math.sin(t)*15,vx:rnd(-20,20),vy:rnd(-20,5),g:40,life:rnd(.6,1.1),cols:['#ffffff','#a0f0ff','#40c0ff']})}await sleep(500)}
+async function staticFx(T){const [x,y]=T.pos;sfx('static');floatT(x,y-22,'BANANA?',null,true);await anim(1.6,()=>{mx.fillStyle='#202026';mx.fillRect(x-8,y-20,17,12);for(let b=0;b<10;b++)for(let a=0;a<15;a++)if(R()<.6){mx.fillStyle=R()<.5?'#e8e8e8':'#6a6a78';mx.fillRect(x-7+a,y-19+b,1,1)}})}
+async function caughtFx(T){const [x,y]=T.pos;await anim(1.6,p=>{mx.globalAlpha=.35;for(let j=0;j<y;j++){const w=Math.round(j*.18);mx.fillStyle='#fff8b0';mx.fillRect(x+6-w,j,w*2+1,1)}mx.globalAlpha=1;const hop=Math.abs(Math.sin(p*20))*3;mx.fillStyle='#1a1a1a';mx.fillRect(x+4,y-8-hop,5,1);mx.fillStyle='#f0c090';mx.fillRect(x+5,y-7-hop,2,1);mx.fillStyle='#b89658';mx.fillRect(x+5,y-6-hop,3,3);px(x+4,y-7-hop,'#b89658');px(x+8,y-7-hop,'#b89658')})}
+async function sabotage(n,T){
+ if(!T||!T.alive)return;if(G.tstats)G.tstats.sab++;log(`${n.nation} sends a spy into ${T.nation}.`);
+ await Promise.all([spyFx(n,T),say(n,ln(n,'sabotage',T),'gloat')]);
+ const opts=['oil','warhead','defense','teleprompter','silo'].filter(o=>o==='silo'?T.missiles>0:o==='warhead'?T.warheads.length>0:o==='defense'?T.abm>0:o==='oil'?T.oil>0:o==='teleprompter'?T!==G.player:true);
+ const caught=R()<.25||!opts.length,[x,y]=T.pos;T.hostility[n.key]=(T.hostility[n.key]||0)+(caught?5:2);
+ if(caught){sfx('alarm');floatT(x,y-16,'CAUGHT!','#ff6a55',true);await caughtFx(T);log(`${n.nation}'s spy is caught in ${T.nation}. Diplomatic incident!`,'hit');await say(n,ln(n,'caught'),'hit');return}
+ const o=pick(opts);
+ if(o==='silo'){const k=Math.min(T.missiles,R()<.4?2:1);T.missiles-=k;await siloFx(T);floatT(x,y-16,'-'+k+' MISSILE'+(k>1?'S':''),'#ff6a55');log(`Sabotage! ${T.nation} loses ${k} missile${k>1?'s':''}.`,'hit')}
+ else if(o==='oil'){const k=Math.min(T.oil,3);T.oil-=k;await oilFireFx(T);if(T.rigs>0)T.rigs--;floatT(x,y-16,'-'+k+' OIL','#ff9a50');log(`Sabotage! ${T.nation}'s oil field goes up in flames.`,'hit')}
+ else if(o==='warhead'){T.warheads.sort((a,b)=>a-b);const mt=T.warheads.pop();await confettiFx(T);floatT(x,y-16,mt+'MT WARHEAD = CONFETTI','#f4d34a');log(`Sabotage! ${T.nation}'s ${mt}MT warhead has been replaced with confetti.`,'hit')}
+ else if(o==='defense'){const k=Math.min(T.abm,2);T.abm-=k;await shieldPopFx(T);floatT(x,y-16,'-'+k+' DEFENSE','#a0f0ff');log(`Sabotage! ${T.nation}'s defenses switched off.`,'hit')}
+ else{T.skip=true;T.skipWhy='hacked';await staticFx(T);floatT(x,y-16,'TELEPROMPTER HACKED','#d0d0ff');log(`Sabotage! ${T.nation}'s teleprompter is hacked. They lose a turn.`,'hit')}
+ refresh();ouch(T);await say(T,ln(T,'sabotaged',n),'hit');
+}
+async function beamTransfer(F,T,count,col,cow){const ps=[];for(let i=0;i<count;i++)ps.push(sleep(i*110).then(()=>{const sx=F[0]+rnd(-6,6);return anim(1.3,p=>{const x=sx+(T[0]-sx)*p+Math.sin(p*14+i)*1.5,y=F[1]+(T[1]-F[1])*p,spin=Math.floor(p*12+i)%2;if(cow)drawCow(x,y,spin);else drawPerson(x,y,col,spin);if(R()<.2)part({x,y,vy:T[1]<F[1]?-10:10,life:.4,cols:['#f0ffd0','#a8f070'],fade:true})})}));await Promise.all(ps)}
+
+/* ---------- dialogue ---------- */
+let dq=Promise.resolve(),typing=false,skipType=false,advanceFn=null,askRes=null;
+function markTalk(n){if(G.nations)G.nations.forEach(x=>x.$row&&x.$row.classList.toggle('talk',x===n))}
+function _speak(sp,text,state,noWait){return new Promise(async done=>{
+ const gen=G.gen;$('#dlgName').textContent=sp.label;const el=$('#dlgText');el.textContent='';$('#dlgMore').hidden=true;markTalk(sp.n);
+ const cv=$('#dlgCv'),card=sp.n&&sp.n.$cv;typing=true;skipType=false;
+ await new Promise(res=>{let i=0;const step=()=>{if(gen!==G.gen){res();return}i=skipType?text.length:i+1;el.textContent=text.slice(0,i);const ch=text[i-1]||' ',f=i>=text.length?0:(/[aeiouAEIOU]/.test(ch)?2:(/[\s.,!?'"]/.test(ch)?0:1));drawFace(cv,sp.key,state,f);if(card)drawFace(card,sp.key,state,f);if(!skipType){const lc=ch.toLowerCase(),pv=(text[i-2]||' ').toLowerCase();if('aeiouy'.includes(lc)&&!'aeiouy'.includes(pv))mumble(sp.key,lc);else if('stkpzcx'.includes(lc)&&R()<.3)consonant()}if(i>=text.length){res();return}setTimeout(step,G.fast?15:33)};step()});
+ typing=false;if(gen!==G.gen||noWait){done();return}
+ $('#dlgMore').hidden=false;
+ await new Promise(res=>{const fin=()=>{clearTimeout(tm);advanceFn=null;res()};const tm=setTimeout(fin,(1200+text.length*32)*spd());advanceFn=fin});
+ $('#dlgMore').hidden=true;done()})}
+function speak(sp,text,state){const p=dq.then(()=>_speak(sp,text,state));dq=p.catch(()=>{});return p}
+const lbl=n=>(n.leader+' · '+n.nation).toUpperCase();
+const say=(n,text,state)=>speak({key:n.key,label:lbl(n),n},text,state||'idle');
+const news=text=>speak({key:'__news',label:'WORLD NEWS'},text,'idle');
+const anchor=text=>speak({key:'__anchor',label:'BIFF BULLETIN · GLOBAL NEWS NETWORK'},text,'idle');
+const alien=text=>speak({key:'__alien',label:'ZORP · GALACTIC HOMEOWNERS ASSOCIATION'},text,'idle');
+function ask(n,text,choices){const gen0=G.gen;const p=dq.then(async()=>{await _speak({key:n.key,label:lbl(n),n},text,'gloat',true);if(G.gen!==gen0)return -1;return await new Promise(res=>{const box=$('#dlgChoices');box.innerHTML='';choices.forEach((c,i)=>{const b=document.createElement('button');b.className='btn'+(i===0?' go':' red');b.textContent=c;b.onclick=e=>{e.stopPropagation();sfx('click');box.innerHTML='';askRes=null;res(i)};box.appendChild(b)});askRes=res})});dq=p.catch(()=>{});return p}
+$('#dialog').addEventListener('click',()=>{if(typing)skipType=true;else if(advanceFn)advanceFn()});
+
+/* ---------- game state ---------- */
+const alive=()=>G.nations?G.nations.filter(n=>n.alive):[];
+const byN=k=>G.nations&&G.nations.find(n=>n.key===k);
+const pairKey=(a,b)=>[a.key,b.key].sort().join('|');
+const allied=(a,b)=>G.allies.has(pairKey(a,b));
+const alliesOf=n=>alive().filter(o=>o!==n&&allied(n,o));
+function makeAlly(a,b){G.allies.add(pairKey(a,b));a.hostility[b.key]=0;b.hostility[a.key]=0}
+function breakAlly(a,b){G.allies.delete(pairKey(a,b))}
+const TICKFILL=['STOCK MARKET UP 3% AS BUNKER SALES SOAR','SCIENTISTS CONFIRM: EVERYTHING IS FINE','LOCAL MAN STILL WAITING FOR PIZZA','WEATHER: SCATTERED MUSHROOMS, CHANCE OF GLOW','COWS DEMAND ANSWERS','UN SENDS SECOND STRONGLY WORDED LETTER','TINFOIL HAT SALES AT ALL-TIME HIGH','EUROPE FORMS COMMITTEE TO NAME THE WAR',"EXPERTS: 'HAVE YOU TRIED TURNING IT OFF AND ON AGAIN?'",'CELEBRITY CHEF OPENS GLOWING RESTAURANT','GALACTIC HOA ISSUES NOISE WARNING TO EARTH','SPORTS: ALL GAMES POSTPONED DUE TO CRATERS','REAL ESTATE: OCEAN VIEWS NOW AVAILABLE EVERYWHERE','TRAFFIC: MOSTLY CRATERS ON THE RING ROAD','HOROSCOPE: AVOID LARGE FLASHES OF LIGHT'];
+function updTicker(){const el=$('#tkText');if(!el)return;const items=(G.news||[]).slice(0,6).concat([pick(TICKFILL),pick(TICKFILL)]);const txt=items.join('   ◆   ');el.textContent=txt;el.style.animationDuration=Math.max(22,txt.length*.16)+'s'}
+function headline(t){if(!G.news)return;G.news.unshift(pick(['BREAKING: ','JUST IN: ','DEVELOPING: ','EXCLUSIVE: ','LIVE: '])+t.toUpperCase());if(G.news.length>8)G.news.length=8}
+function log(t,cls){if(['war','hit','dead','pact','ufo'].includes(cls))headline(t);const d=document.createElement('div');d.textContent='T'+G.turn+' · '+t;if(cls)d.className=cls;const l=$('#log');l.prepend(d);while(l.children.length>80)l.lastChild.remove()}
+function setRowState(n,st){n.rs=st;drawFace(n.$cv,n.key,st,0)}
+
+/* ---------- title screen ---------- */
+let chosen='america';
+function buildCast(){
+ const g=$('#cast');g.innerHTML='';
+ LEADERS.forEach(L=>{const b=document.createElement('button');b.className='pick';b.type='button';b.setAttribute('aria-pressed',L.key===chosen);b.innerHTML=`<div class="win"><canvas class="px" width="72" height="72"></canvas></div><div class="nm">${esc(L.leader)}</div><div class="co">${esc(L.nation)}</div>`;drawFace(b.querySelector('canvas'),L.key,L.key===chosen?'gloat':'idle',0);b.onclick=()=>{chosen=L.key;buildCast();voice(L.key);voice(L.key)};g.appendChild(b)});
+ const L=byL(chosen);$('#bName').textContent=L.leader+' · '+L.nation;$('#bBio').textContent=L.bio;$('#bQuirk').textContent='Quirk: '+L.quirk;
+}
+
+/* ---------- game setup ---------- */
+const GRUDGES={nk:{america:1.5},america:{nk:2,russia:1},russia:{europe:2,america:2},iran:{israel:3},israel:{iran:3},china:{america:1},europe:{russia:2}};
+function show(id){['#scrTitle','#scrGame','#scrEnd'].forEach(s=>$(s).hidden=s!==id);$('#btnQuit').hidden=id!=='#scrGame';$('#app').classList.toggle('ingame',id==='#scrGame')}
+function rigSpots(n){const out=[];for(let r=10;r<=19&&out.length<3;r+=3)for(let k=0;k<16&&out.length<3;k++){const a=k/16*Math.PI*2+n.key.length;const x=Math.round(n.pos[0]+Math.cos(a)*r),y=Math.round(n.pos[1]+Math.sin(a)*r*.6);if(x>5&&x<MW-5&&y>12&&y<MH-4&&LAND[y]&&LAND[y][x]&&!out.some(p=>Math.abs(p[0]-x)<7&&Math.abs(p[1]-y)<5))out.push([x,y,false])}let k=0;while(out.length<3){out.push([n.pos[0]-8+k*8,Math.min(MH-6,n.pos[1]+13),true]);k++}return out}
+function resetFx(){ents=[];parts=[];G.incoming=[];G.fallout=[];G.doom=0;if($('#incoming'))updIncoming();zoomN=0;$('.mapbox').style.transform='';$('#mapwrap').classList.remove('alert');$('#cutin').innerHTML='';ufo.on=false;ufo.beam=0;G.flash=0;$('#floaters').innerHTML='';$('#dlgChoices').innerHTML=''}
+function initGame(key){
+ G.gen++;resetFx();buildBase();
+ G.nations=LEADERS.map(L=>{const s=JSON.parse(JSON.stringify(L.start));return Object.assign({},L,s,{startPop:s.pop,alive:true,hostility:{},skip:false,rs:'idle',rigs:L.rigs||0})});
+ G.nations.forEach(n=>{n.rigSpots=rigSpots(n);G.nations.forEach(o=>{if(o!==n)n.hostility[o.key]=rnd(0,2)+((GRUDGES[n.key]||{})[o.key]||0)})});
+ G.tstats={hits:0,mt:0,deaths:0,pacts:0,ufo:0,sab:0};G.news=[];G.doom=0;G.fallout=[];G.incoming=[];G.spectate=false;
+ G.player=byN(key);G.turn=1;G.war=false;G.mt=0;G.winter=false;G.order=null;G.pending=null;G.busy=false;G.allies=new Set();G.craters=[];G.deadOrder=[];G.lastDead=null;G.armsRace=false;
+ if(G.fast){G.fast=false;toggle($('#btnFast'),false,'Fast')}
+ dq=Promise.resolve();buildRoster();updTicker();updIncoming();$('#log').innerHTML='';show('#scrGame');
+ log('Seven leaders sit down at the big table. Somebody has brought snacks. Nobody trusts the snacks.','war');
+ startTurn();
+}
+function buildRoster(){
+ const L=$('#sideL'),Rt=$('#sideR'),tg=$('#tags');L.innerHTML='';Rt.querySelectorAll('.card').forEach(c=>c.remove());tg.innerHTML='';
+ const WEST=['america','europe','israel','iran'];
+ G.nations.forEach(n=>{
+  const r=document.createElement('div');r.className='card'+(n===G.player?' me':'');
+  r.innerHTML=`<div class="pw"><canvas class="px" width="72" height="72"></canvas></div><div><span class="rn"></span>${n===G.player?'<span class="you">YOU</span>':''}<span class="ally" hidden>ALLY</span></div><div class="ld"></div><div class="bar"><i></i></div><div class="st"></div>`;
+  if(WEST.includes(n.key))L.appendChild(r);else Rt.insertBefore(r,$('#log'));
+  n.$row=r;n.$cv=r.querySelector('canvas');n.$bar=r.querySelector('.bar i');n.$st=r.querySelector('.st');n.$rn=r.querySelector('.rn');n.$ld=r.querySelector('.ld');n.$ally=r.querySelector('.ally');
+  r.onclick=()=>{if(G.busy||!G.pending||!validTarget(G.pending,n))return;G.order={type:G.pending,target:n.key};sfx('click');renderCommand()};
+  drawFace(n.$cv,n.key,'idle',0);
+  const t=document.createElement('div');t.className='tag '+n.lab;t.style.left=(n.pos[0]/MW*100)+'%';t.style.top=(n.pos[1]/MH*100)+'%';tg.appendChild(t);n.$tag=t;
+ });
+ refresh();
+}
+function wh(n){return n.warheads.length?n.warheads.slice().sort((a,b)=>b-a).join('/'):'—'}
+function refresh(){
+ if(!G.nations)return;
+ G.nations.forEach(n=>{
+  const lv=dmgLevel(n.key);if(lv!==n.$lv){if(n.$lv!==undefined&&lv>n.$lv&&n.alive)floatT(n.pos[0],n.pos[1]-20,['','BRUISED','BANDAGED','SINGED'][lv],'#ffd8a0');n.$lv=lv;drawFace(n.$cv,n.key,n.rs||'idle',0)}
+  n.$rn.textContent=n.nation.toUpperCase();n.$ld.textContent=n.leader;
+  n.$row.classList.toggle('dead',!n.alive);
+  n.$ally.hidden=!(n!==G.player&&n.alive&&allied(G.player,n));
+  n.$bar.style.width=Math.max(0,Math.min(100,n.pop/150*100))+'%';
+  n.$st.innerHTML=n.alive?`<span>POP <b>${n.pop}M</b></span><span>OIL <b>${n.oil}</b></span><span>MSL <b>${n.missiles}</b></span><span>BMB <b>${n.bombers}</b></span><span>ABM <b>${n.abm}</b></span><span>WHD <b>${wh(n)}</b></span>`:'<span>Wiped off the map</span>';
+  n.$tag.innerHTML=`${esc(n.nation.toUpperCase())}<br><i>${n.alive?n.pop+'M':'GONE'}</i>`;n.$tag.classList.toggle('dead',!n.alive);
+ });
+ renderCommand();
+}
+
+/* ---------- player command ---------- */
+const PEACE_TURNS=3;
+const needT={propaganda:1,missile:1,bomber:1,nuke:1,ally:1,sabotage:1,super:1};
+function canDo(n,act){
+ if((act==='missile'||act==='nuke'||act==='bomber'||act==='super')&&!G.war)return false;
+ if(act==='super')return G.mt>=SUPER_MT&&!n.superUsed;
+ if(act==='missile'||act==='nuke')return n.missiles>0&&n.warheads.length>0;
+ if(act==='bomber')return n.bombers>0&&n.warheads.length>0&&n.oil>=2;
+ if(act==='ally')return alliesOf(n).length<2&&alive().some(o=>o!==n&&!allied(n,o));
+ return true}
+function validTarget(act,o){return o!==G.player&&o.alive&&(act!=='ally'||!allied(G.player,o))}
+function describe(o){if(!o)return'';const T=o.target?byN(o.target).nation:'';const p=G.player,big=p.warheads.length?Math.max(...p.warheads):0;
+ return{build:'Build weapons.',defend:'Build missile defenses.',drill:'Drill for oil.',propaganda:`Run propaganda against ${T}.`,super:`Unleash a ridiculous super-weapon on ${T}. Once per game.`,sabotage:`Send a spy to sabotage ${T}.`,ally:`Propose an alliance to ${T}.`,missile:`Launch a ${big}MT missile at ${T}.`,bomber:`Send a ${big}MT bomber to ${T} (2 oil).`,nuke:`Fire ALL ${Math.min(p.missiles,p.warheads.length)} missiles at ${T}. No take-backs.`}[o.type]}
+function renderCommand(){
+ const p=G.player;if(!p||!G.nations)return;
+ G.nations.forEach(n=>{if(!n.$row)return;n.$row.classList.toggle('pickable',!G.busy&&!!G.pending&&validTarget(G.pending,n));n.$row.classList.toggle('chosen',!!(G.order&&G.order.target===n.key))});
+ const al=alliesOf(p).map(a=>a.nation).join(', ');
+ $('#turnInfo').textContent=`${p.alive?'':'SPECTATING · '}TURN ${G.turn} · ${G.war?'WORLD WAR · DEFCON 1':'PEACETIME · DEFCON '+(6-G.turn)+' · WAR IN '+(PEACE_TURNS+1-G.turn)+(PEACE_TURNS+1-G.turn===1?' TURN':' TURNS')} · ${G.mt} MT${G.winter?' · NUCLEAR WINTER':''}${al?' · ALLIES: '+al.toUpperCase():''}`;
+ document.querySelectorAll('#actions .btn').forEach(b=>{const a=b.dataset.act;b.disabled=G.busy||!p.alive||!canDo(p,a);b.title=(!G.war&&(a==='missile'||a==='bomber'||a==='nuke'||a==='super'))?'Locked until the world war starts':(a==='super'?(p.superUsed?'Already used (once per game)':G.mt<SUPER_MT?`Unlocks after ${SUPER_MT} megatons (${G.mt} so far)`:''):'');b.classList.toggle('on',(G.pending===a)||(G.order&&G.order.type===a));b.setAttribute('aria-pressed',b.classList.contains('on'))});
+ const tg=$('#targets');tg.innerHTML='';
+ alive().filter(n=>n!==p).forEach(n=>{const b=document.createElement('button');b.className='btn';b.textContent=n.nation;b.disabled=G.busy||!G.pending||!validTarget(G.pending,n);if(G.order&&G.order.target===n.key)b.classList.add('on');b.onclick=()=>{G.order={type:G.pending,target:n.key};sfx('click');renderCommand()};tg.appendChild(b)});
+ $('#orderTxt').textContent=!p.alive?'Spectating. Your nation is a fine glowing powder.':G.busy?'Orders sent. Watch the world react.':(G.order?describe(G.order):(G.pending?'Pick a target.':'Pick an order.'));
+ $('#btnEnd').disabled=G.busy||!G.order;
+}
+document.querySelectorAll('#actions .btn').forEach(b=>b.onclick=()=>{const a=b.dataset.act;sfx('click');if(needT[a]){G.pending=a;const keep=G.order&&G.order.target&&validTarget(a,byN(G.order.target));G.order=keep?{type:a,target:G.order.target}:null}else{G.pending=null;G.order={type:a}}renderCommand()});
+$('#btnEnd').onclick=()=>{if(!G.busy&&G.order)resolveTurn()};
+
+/* ---------- AI ---------- */
+function enemyOf(n){let best=null,bs=-1e9;for(const o of alive()){if(o===n)continue;if(allied(n,o)&&R()>.04)continue;const s=(n.hostility[o.key]||0)+rnd(0,3)+(o===G.player?.1:0)+o.missiles*.12;if(s>bs){bs=s;best=o}}return best}
+function shared(a,b){return alive().some(o=>o!==a&&o!==b&&(a.hostility[o.key]||0)>3&&(b.hostility[o.key]||0)>3)}
+function allyCand(n){const e=enemyOf(n);let best=null,bs=-1e9;for(const o of alive()){if(o===n||o===e||allied(n,o)||alliesOf(o).length>=2)continue;const s=-(n.hostility[o.key]||0)-(o.hostility[n.key]||0)+(shared(n,o)?3:0)+rnd(0,2);if(s>bs){bs=s;best=o}}return best}
+function acceptP(B,A){if(alliesOf(B).length>=2)return 0;return Math.max(.05,Math.min(.9,.5-(B.hostility[A.key]||0)*.07+(shared(A,B)?.25:0)))}
+function aiChoose(n){
+ const e=enemyOf(n);if(!e)return{type:'build'};
+ if(n.oil<=1&&R()<.7)return{type:'drill'};
+ if(G.war){
+  if(canDo(n,'super')&&R()<.3)return{type:'super',target:e.key};
+  if(n.missiles>=3&&n.warheads.length>=2&&R()<n.aggr*.22)return{type:'nuke',target:e.key};
+  const cM=canDo(n,'missile'),cB=n.bombers>0&&n.warheads.length>0&&n.oil>=3;
+  if(R()<.1)return{type:'sabotage',target:e.key};
+  if(cM||cB){const esc=1+Math.max(0,G.turn-6)*.07,p=n.aggr*(G.war?.8:.3)*esc+(n.hostility[e.key]||0)*.04;if(R()<p)return{type:cM&&(!cB||R()<.65)?'missile':'bomber',target:e.key}}
+ }
+ if(alive().length>3&&alliesOf(n).length<2&&R()<.14){const c=allyCand(n);if(c)return{type:'ally',target:c.key}}
+ if(!n.warheads.length||!n.missiles){if(R()<.55)return{type:'build'}}
+ const r=R();if(r<.3)return{type:'build'};if(r<.46&&n.abm<4)return{type:'defend'};if(r<.8)return{type:'propaganda',target:e.key};return{type:'drill'};
+}
+
+/* ---------- strikes ---------- */
+function takeWarhead(n){n.warheads.sort((a,b)=>a-b);return n.warheads.pop()}
+function applyHit(n,T,mt,x,y,what){if(!T.alive)return 0;const kills=Math.min(T.pop,Math.round(mt*rnd(.35,.6)));T.pop-=kills;T.oil=Math.max(0,T.oil-1);G.mt+=mt;floatT(x,y-12,'-'+kills+'M','#ff6a55');ouch(T);setRowState(T,'hit');panic(x,y,T.color);log(`${mt}MT ${what} from ${n.nation} hits ${T.nation}: ${kills}M casualties.`,'hit');if(G.tstats){G.tstats.hits++;G.tstats.mt+=mt}refresh();if(T.alive&&!T.desp&&T.pop>0&&T.pop<T.startPop*.3){T.desp=true;say(T,ln(T,'desperate'),'hit')}return kills}
+async function launchMissile(n,T,mt,opts){
+ const dur=1.8,to=[T.pos[0]+rnd(-5,5),T.pos[1]+rnd(-3,3)];sfx('launch');
+ const draw=(x,y,a)=>{drawMissile(x,y,a,n.color);smoke(x,y,a)};
+ if(n.key==='nk'&&n!==G.player&&R()<.15){const miss=[Math.max(6,Math.min(MW-6,n.pos[0]+rnd(-34,34))),Math.min(152,n.pos[1]+rnd(24,40))];await fly(arc(n.pos,miss,.6),1.4,1,draw);await boom(miss[0],miss[1],8);floatT(miss[0],miss[1]-10,'OOPS','#f4d34a');log(`North Korea's ${mt}MT missile goes sideways into the ocean.`);if(!opts.salvo)await say(n,ln(n,'misfire'),'hit');return 'misfire'}
+ const path=arc(n.pos,to,.5);
+ if(T===G.player&&T.alive)return await incomingMissile(n,T,mt,path,draw);
+ if(!ufo.on&&R()<.07){const stopT=.55,meet=at(path,stopT);const fP=fly(path,dur,stopT,draw);const uP=ufoEnter(meet[0],meet[1]-13,dur*stopT*.85);const end=await fP;await uP;ufo.beam=1;ufo.beamLen=12;sfx('beam');
+  await anim(1.1,p=>drawMissile(end.pos[0],end.pos[1]-p*10,end.ang+p*4,n.color));ufo.beam=0;floatT(ufo.x,ufo.y-8,'CONFISCATED','#a8f070');log(`A flying saucer confiscates ${n.nation}'s ${mt}MT missile.`,'ufo');
+  await Promise.all([ufoLeave(),alien(aln('snatch'))]);return 'ufo'}
+ let blocked=false;if(T.abm>0){T.abm--;blocked=R()<(T.key==='israel'||T.key==='europe'?.65:.55)}
+ if(blocked){const stopT=.78,meet=at(path,stopT),md=dur*stopT;
+  const fP=fly(path,dur,stopT,draw);
+  const iP=sleep(md*450).then(()=>{sfx('intercept');return fly(arc(T.pos,meet,.15),md*.55,1,(x,y,a)=>{drawInterceptor(x,y,a);part({x,y,life:.35,cols:['#a0f0ff','#40c0ff'],fade:true})})});
+  const end=await fP;await iP;sfx('intercept');
+  for(let i=0;i<24;i++)part({x:end.pos[0],y:end.pos[1],vx:rnd(-30,30),vy:rnd(-30,20),g:30,life:rnd(.4,.9),s0:2,s1:1,cols:['#ffffff','#a0f0ff','#ffb040','#6a6a78']});
+  await anim(.5,p=>{ring(end.pos[0],end.pos[1],1+p*7,1+p*7,p<.5?'#ffffff':'#a0f0ff');if(p<.3)ell(end.pos[0],end.pos[1],2.5,2.5,'#fff0a0')});
+  floatT(end.pos[0],end.pos[1]-8,'BLOCKED','#a0f0ff');log(`${T.nation}'s defenses shoot down a ${mt}MT missile from ${n.nation}.`);return 'blocked'}
+ await fly(path,dur,1,draw);
+ applyHit(n,T,mt,to[0],to[1],'missile');await boom(to[0],to[1],mt,{noZoom:opts.salvo});return 'hit';
+}
+async function launchBomber(n,T,mt){
+ const to=[T.pos[0]+rnd(-4,4),T.pos[1]+rnd(-3,3)],path={A:n.pos,B:to,C:[(n.pos[0]+to[0])/2,Math.max(6,(n.pos[1]+to[1])/2-8)]},right=to[0]>=n.pos[0],dur=2.8;
+ sfx('plane');const draw=(x,y,a,t)=>{drawBomber(x,y,right,n.color);if(R()<.4)part({x:x-(right?7:-7),y,life:.6,s0:1,s1:2,cols:['#c8c8d4','#8a8a98'],fade:true})};
+ if(R()<(n.key==='america'?.1:.22)){const end=await fly(path,dur,.7,(x,y,a,t)=>{draw(x,y,a,t);if(t>.4&&R()<.3)part({x:x+rnd(-7,7),y:y+rnd(-6,6),life:.5,s0:2,s1:4,cols:['#ffffff','#44444e','#24242a'],fade:true})});
+  sfx('crash');await anim(.9,p=>{const x=end.pos[0]+(right?1:-1)*p*10,y=end.pos[1]+p*p*16;drawBomber(x,y,right,'#555');part({x,y,vy:-6,life:.8,s0:1,s1:3,cols:['#ff9a30','#44444e','#24242a'],fade:true})});
+  const cx=end.pos[0]+(right?10:-10),cy=end.pos[1]+16;await boom(cx,cy,5);floatT(cx,cy-8,'SHOT DOWN','#a0f0ff');log(`${n.nation}'s bomber is shot down near ${T.nation}. ${mt}MT lost.`);return 'shot'}
+ await fly(path,dur,1,draw);
+ await anim(.45,p=>{drawBomber(to[0]+(right?1:-1)*p*8,to[1]-1,right,n.color);px(to[0],to[1]-1+p*3,'#222');px(to[0],to[1]+p*3,'#444')});
+ applyHit(n,T,mt,to[0],to[1],'bomb');await boom(to[0],to[1],mt);return 'hit';
+}
+async function eliminate(T){if(!T.alive)return;if(G.tstats)G.tstats.deaths++;T.pop=0;T.alive=false;T.warheads=[];T.missiles=0;T.bombers=0;T.abm=0;G.deadOrder.push(T.key);G.lastDead=T;for(const k of [...G.allies])if(k.split('|').includes(T.key))G.allies.delete(k);refresh();log(`${T.nation} has been wiped off the map.`,'dead');
+ await cutin([T.key],'WIPED OUT',`${T.nation} is now a fine glowing powder`,'dark');await say(T,ln(T,'lose'),'hit');
+ if(T===G.player&&alive().length>1){log('You have been vaporized.','dead');const i=await ask(T,'My nation has been vaporized. The war goes on without me. What now?',['Watch the rest','New game']);if(i===1){toTitle();return}if(i<0)return;G.spectate=true;banner('SPECTATING',true);log('Spectating until one nation is left.','dead')}
+ refresh()}
+async function attack(n,T,kind,opts={}){
+ if(!T||!T.alive||!n.alive)return;
+ if(!canDo(n,kind)){log(`${n.nation} tries to attack but has nothing to fire. Awkward.`);return}
+ if(allied(n,T)){breakAlly(n,T);log(`${n.nation} betrays its ally ${T.nation}!`,'war');T.hostility[n.key]=(T.hostility[n.key]||0)+6;refresh();await cutin([n.key,T.key],'BETRAYAL!',`${n.nation} stabs ${T.nation} in the back`,'purple');await Promise.all([betrayFx(n,T),say(n,ln(n,'betray',T),'gloat')])}
+ if(n.key==='europe'&&n!==G.player&&!opts.join&&!opts.retal&&R()<.25){log(`Europe's strike on ${T.nation} is stuck in committee.`);await say(n,ln(n,'delay'));return}
+ if(!G.war){G.war=true;sfx('siren');log('*** WAR HAS BEGUN *** '+n.nation+' fired first. History will remember. Briefly.','war');await cutin([n.key],'WAR HAS BEGUN',`${n.nation} fired first. History will remember. Briefly.`,'')}
+ let res=[];
+ if(kind==='nuke'){
+  const k=Math.min(n.missiles,n.warheads.length);sfx('siren');log(`${n.nation} presses the big red button: ${k} missiles at ${T.nation}!`,'war');
+  $('#mapwrap').classList.add('alert');
+  await Promise.all([cutin([n.key],'NUCLEAR LAUNCH',`${n.leader} pressed the big red button`,'',true),say(n,ln(n,'nuke',T),'gloat')]);
+  for(const c of ['3','2','1']){sfx('beep');floatT(n.pos[0],n.pos[1]-18,c,null,true);await sleep(450)}
+  const ps=[];for(let i=0;i<k;i++){const mt=takeWarhead(n);n.missiles--;ps.push(sleep(i*280).then(()=>launchMissile(n,T,mt,{salvo:true})))}
+  refresh();setTimeout(()=>zoomIn(T.pos[0],T.pos[1],1.45),1300*spd());res=await Promise.all(ps);setTimeout(zoomOut,300);$('#mapwrap').classList.remove('alert');
+ }else if(kind==='missile'){
+  const mt=takeWarhead(n);n.missiles--;refresh();
+  const said=ln(n,opts.join?'teamup':'launch',T);
+  res=[(await Promise.all([launchMissile(n,T,mt,{}),say(n,said,'gloat')]))[0]];
+ }else{
+  const mt=takeWarhead(n);n.bombers--;n.oil-=2;refresh();
+  res=[(await Promise.all([launchBomber(n,T,mt),say(n,ln(n,'launch',T),'gloat')]))[0]];
+ }
+ refresh();
+ const hits=res.filter(r=>r==='hit').length,blk=res.filter(r=>r==='blocked'||r==='shot').length;
+ T.hostility[n.key]=(T.hostility[n.key]||0)+(hits?5:3);
+ if(T.alive&&T.pop<1)await eliminate(T);
+ else if(T.alive&&hits){await say(T,ln(T,'hit',n),'hit');if(R()<.45){const B=pick(alive().filter(o=>o!==n&&o!==T));if(B)await say(B,ln(B,'taunt',T),'gloat')}}
+ else if(T.alive&&blk)await say(T,ln(T,'block',n),'gloat');
+ if(!opts.join&&!opts.retal){
+  for(const A of alliesOf(n)){if(!T.alive)break;if(A===G.player||A===T||allied(A,T)||!canDo(A,'missile')||R()>.6)continue;banner('TEAM-UP!');log(`${A.nation} joins its ally ${n.nation} against ${T.nation}.`,'pact');await attack(A,T,'missile',{join:true})}
+  if(T.alive&&n.alive)for(const D of alliesOf(T)){if(D===G.player||D===n||allied(D,n)||!canDo(D,'missile')||R()>.35||!n.alive)continue;banner(D.nation.toUpperCase()+' RETALIATES',true);log(`${D.nation} avenges its ally ${T.nation}.`,'pact');await attack(D,n,'missile',{retal:true})}
+ }
+}
+
+/* ---------- diplomacy ---------- */
+async function proposeAlly(A,B){
+ if(!B||!B.alive||allied(A,B))return;
+ let ok;
+ if(B===G.player){const i=await ask(A,ln(A,'ally',B),['Accept','Decline']);ok=i===0;if(i<0)return}
+ else{await say(A,ln(A,'ally',B),'gloat');ok=R()<acceptP(B,A)&&alliesOf(A).length<2}
+ await allyFx(A,B,ok);
+ if(ok){makeAlly(A,B);if(G.tstats)G.tstats.pacts++;log(`${A.nation} and ${B.nation} form an alliance.`,'pact');refresh();await cutin([A.key,B.key],'ALLIANCE!',`${A.nation} and ${B.nation} are best friends now. For now.`,'gold');await say(B,ln(B,'accept',A),'gloat')}
+ else{A.hostility[B.key]=(A.hostility[B.key]||0)+1;log(`${B.nation} rejects ${A.nation}'s alliance.`);await say(B,ln(B,'decline',A))}
+}
+
+/* ---------- UFOs ---------- */
+async function ufoRaid(T){
+ if(!T||!T.alive)return;if(G.tstats)G.tstats.ufo++;banner('UNIDENTIFIED FLYING OBJECT');log(`A flying saucer descends on ${T.nation}.`,'ufo');
+ await ufoEnter(T.pos[0],T.pos[1]-20,1.6);await alien(aln('raid'));
+ let total=0;
+ for(let i=0;i<3&&T.alive;i++){const c=T.spread[i],tx=T.pos[0]+c[0],ty=T.pos[1]+c[1];sfx('laser');
+  await anim(.35,()=>{lineP(ufo.x,ufo.y+2,tx,ty,'#a8f070');lineP(ufo.x+1,ufo.y+2,tx+1,ty,'#f0ffd0')});
+  const k=Math.min(T.pop,Math.round(rnd(2,5)));T.pop-=k;total+=k;floatT(tx,ty-8,'-'+k+'M','#a8f070');refresh();boom(tx,ty,6)}
+ if(T.missiles>0&&R()<.6){T.missiles--;floatT(T.pos[0],T.pos[1]-18,'-1 MISSILE','#a8f070')}
+ log(`The saucer zaps ${T.nation}: ${total}M lost.`,'ufo');refresh();
+ await Promise.all([ufoLeave(),T.pop>=1?say(T,ln(T,'ufo'),'hit'):Promise.resolve()]);
+ if(T.alive&&T.pop<1)await eliminate(T);
+}
+async function ufoAbduct(T,cows){
+ if(!T||!T.alive)return;if(G.tstats)G.tstats.ufo++;
+ banner(cows?'COW EMERGENCY':'CLOSE ENCOUNTER');log(cows?`A flying saucer abducts ${T.nation}'s cows.`:`A flying saucer hovers over ${T.nation} with a big friendly beam.`,'ufo');
+ await ufoEnter(T.pos[0],T.pos[1]-24,1.6);ufo.beam=1;ufo.beamLen=22;sfx('beam');
+ if(cows){sfx('moo');await Promise.all([beamTransfer([T.pos[0],T.pos[1]+3],[ufo.x,ufo.y+2],8,null,true),alien(aln('cows'))]);ufo.beam=0;floatT(T.pos[0],T.pos[1]-12,'-12 COWS','#ffffff');await Promise.all([ufoLeave(),say(T,ln(T,'ufo'),'hit')]);return}
+ const k=Math.max(1,Math.min(T.pop-1,Math.round(rnd(3,9))));
+ await Promise.all([beamTransfer([T.pos[0],T.pos[1]+3],[ufo.x,ufo.y+2],12,T.color),alien(aln('abduct'))]);
+ ufo.beam=0;T.pop-=k;floatT(T.pos[0],T.pos[1]-12,'-'+k+'M ABDUCTED','#a8f070');log(`${k}M people from ${T.nation} beamed up for a survey.`,'ufo');refresh();
+ const r=R(),others=alive().filter(o=>o!==T);
+ if(r<.35&&others.length){const D=pick(others);await ufoTo(D.pos[0],D.pos[1]-24,1.4);ufo.beam=1;sfx('beam');await Promise.all([beamTransfer([ufo.x,ufo.y+2],[D.pos[0],D.pos[1]+3],10,T.color),alien(sub(aln('drop'),D))]);ufo.beam=0;D.pop+=k;floatT(D.pos[0],D.pos[1]-12,'+'+k+'M SPACE TOURISTS','#a8f070');log(`The saucer drops ${k}M confused people in ${D.nation}.`,'ufo');refresh()}
+ else if(r<.55){await alien(aln('ret'));ufo.beam=1;sfx('beam');await beamTransfer([ufo.x,ufo.y+2],[T.pos[0],T.pos[1]+3],10,'#a8f070');ufo.beam=0;T.pop+=k+2;floatT(T.pos[0],T.pos[1]-12,'+'+(k+2)+'M WITH HATS','#a8f070');log(`The aliens return ${k+2}M people to ${T.nation}, all wearing souvenir hats.`,'ufo');refresh()}
+ await Promise.all([ufoLeave(),say(T,ln(T,'ufo'),'hit')]);
+}
+
+/* ---------- GNN news break ---------- */
+const ANCHOR_QUIPS=['Back to you, nobody.',"Our weather girl has evaporated. Here's a cow with the forecast.",'This bulletin is brought to you by Bunker-Os, the cereal that survives anything.','In lighter news: no.',"Stay tuned for our new show, 'Who Wants To Be A Survivor'.","I'm being told our studio is next. Goodnight!",'Ratings have never been higher. Population has never been lower.','Remember: if you can read this, you are doing better than most.'];
+async function newsBreak(){const t=G.tstats;if(!t)return;
+ const bits=[];bits.push(t.hits?`${t.hits} direct hit${t.hits>1?'s':''} and ${t.mt} megatons`:'not a single direct hit, which is terrible for ratings');if(t.deaths)bits.push(`${t.deaths} nation${t.deaths>1?'s':''} wiped off the map`);if(t.pacts)bits.push(`${t.pacts} new friendship${t.pacts>1?'s':''} that won't last`);if(t.ufo)bits.push(`${t.ufo} alien visit${t.ufo>1?'s':''}`);if(t.sab)bits.push(`${t.sab} spy mission${t.sab>1?'s':''}`);
+ const lead=[...alive()].sort((a,b)=>b.pop-a.pop)[0],last=[...alive()].sort((a,b)=>a.pop-b.pop)[0];
+ sfx('news');await cutin(['__anchor'],'GNN NEWS BREAK',`Turn ${G.turn} · Biff Bulletin reporting`,'newsci');
+ await anchor(`Good evening. Since our last bulletin: ${bits.join(', ')}. ${lead.nation} leads with ${lead.pop} million people. ${last!==lead?last.nation+' is looking a little crispy. ':''}${pick(ANCHOR_QUIPS)}`);
+ G.tstats={hits:0,mt:0,deaths:0,pacts:0,ufo:0,sab:0}}
+
+/* ---------- super-weapons ---------- */
+const SUPER_MT=300;
+const SUPERS={laser:['ORBITAL MAGNIFYING GLASS','It is a magnifying glass. In space.'],robot:['MEGA-MECH 3000','Assembled from 4,000 vacuum cleaners.'],cows:['COW CATAPULT','Fifty cows. One catapult. Zero regrets.']};
+const SUPERLINES={laser:['Focusing sunlight on {t}. Like an ant. A very big ant.','Say cheese, {t}! It is a sunny day! Much too sunny!','Space magnifying glass, activate! {t}, you may feel warm.'],robot:['Go, robot! Step on {t}! Mind the flowerbeds! Actually, do not.','My robot has one setting: stomp. {t}, meet stomp.','{t}, I sent you a very large hug. It is made of metal.'],cows:['Fire the cows! FIRE ALL THE COWS!','{t}, prepare to be mooed.','Incoming beef, {t}! Fifty heads of it!']};
+function drawRobot(x,y,ph){x=Math.round(x);y=Math.round(y);mx.fillStyle='#4a4f5c';mx.fillRect(x-4,y-5+(ph?0:2),3,5);mx.fillRect(x+1,y-5+(ph?2:0),3,5);mx.fillStyle='#9096a0';mx.fillRect(x-6,y-14,12,9);mx.fillStyle='#c4c8d0';mx.fillRect(x-6,y-14,12,1);mx.fillStyle='#e8c030';mx.fillRect(x-2,y-11,4,3);mx.fillStyle='#6a6f7c';mx.fillRect(x-9,y-13+(ph?1:0),3,7);mx.fillRect(x+6,y-13+(ph?0:1),3,7);mx.fillStyle='#9096a0';mx.fillRect(x-4,y-20,8,6);mx.fillStyle=(Math.floor(clock*6)%2)?'#ff2020':'#ff9090';mx.fillRect(x-3,y-18,2,1);mx.fillRect(x+1,y-18,2,1);mx.fillStyle='#24242a';mx.fillRect(x-2,y-16,4,1);mx.fillRect(x,y-24,1,4);px(x,y-25,'#ff4040')}
+function drawSat(x,y){x=Math.round(x);y=Math.round(y);mx.fillStyle='#2a6aa0';mx.fillRect(x-9,y-2,5,3);mx.fillRect(x+5,y-2,5,3);mx.fillStyle='#a0d8ff';mx.fillRect(x-8,y-1,3,1);mx.fillRect(x+6,y-1,3,1);mx.fillStyle='#c4c8d0';mx.fillRect(x-3,y-3,7,5);mx.fillStyle='#e8c030';mx.fillRect(x-1,y-2,3,3);mx.fillStyle='#9096a0';mx.fillRect(x,y+2,1,3);ring(x,y+8,4,3,'#c4c8d0');ell(x,y+8,3,2,'#a0e8ff')}
+async function laserFx(T){const [tx,ty]=T.pos;let sx=-12;sfx('ufo');
+ await anim(1.3,p=>{sx=-12+(tx+12)*(1-Math.pow(1-p,2));drawSat(sx,10)});
+ sfx('zapbeam');floatT(tx,ty-24,'SIZZLE!',null,true);
+ await anim(2,p=>{drawSat(tx,10);const fl=Math.floor(clock*20)%2;for(let yy=22;yy<=ty;yy++){const w=Math.round(1+(yy-22)/(ty-22+1)*4*(.7+.3*Math.sin(p*30)));mx.fillStyle=fl?'#fff8c0':'#ffd040';mx.fillRect(tx-w,yy,w*2+1,1);mx.fillStyle='#ffffff';mx.fillRect(tx-Math.floor(w/3),yy,Math.floor(w/3)*2+1,1)}ring(tx,ty,6+p*10,3+p*4,'#ffb040');for(let i=0;i<3;i++)part({x:tx+rnd(-6,6),y:ty-rnd(0,4),vx:rnd(-10,10),vy:rnd(-35,-12),life:rnd(.4,.9),s0:2,s1:1,cols:['#fff0a0','#ffb040','#e05a20']});if(R()<.4)part({x:tx+rnd(-4,4),y:ty-6,vx:rnd(-3,3),vy:rnd(-12,-6),life:2,s0:2,s1:6,cols:['#3a3434','#24242a'],fade:true})});
+ scorch(tx,ty,8);G.craters.push({x:tx,y:ty,s:5,t:3});shake(true);
+ await anim(.9,p=>drawSat(tx+p*(MW+20-tx),10-p*4))}
+async function robotFx(T){const [tx,ty]=T.pos,x0=tx<MW/2?-14:MW+14;let step=-1;floatT(tx,ty-26,'STOMP STOMP STOMP',null,true);
+ await anim(3,p=>{const x=x0+(tx-x0)*p,y=ty+2,k=Math.floor(p*12);if(k!==step){step=k;sfx('stomp');shake(false);for(let i=0;i<6;i++)part({x:x+rnd(-4,4),y,vx:rnd(-12,12),vy:rnd(-10,-2),g:20,life:.6,cols:['#b89658','#8a6c38'],fade:true})}drawRobot(x,y,k%2)});
+ for(let i=0;i<3;i++){const c=T.spread[i];await anim(.35,p=>drawRobot(tx+c[0],ty+c[1]+2-(p<.5?p*8:(1-p)*8),i%2));sfx('stomp');boom(tx+c[0],ty+c[1],8)}
+ await anim(1,p=>drawRobot(tx+(x0<0?-1:1)*p*20,ty+2-p*30,Math.floor(p*10)%2))}
+async function cowFx(n,T){sfx('moo');const ps=[];for(let i=0;i<24;i++)ps.push(sleep(i*70).then(()=>{const to=[T.pos[0]+rnd(-10,10),T.pos[1]+rnd(-6,6)],path=arc(n.pos,to,.55);return anim(1.5,p=>{const [x,y]=at(path,p);drawCow(x,y,Math.floor(p*14+i)%2)}).then(()=>{for(let k=0;k<8;k++)part({x:to[0],y:to[1],vx:rnd(-14,14),vy:rnd(-16,-2),g:30,life:.6,cols:['#f4f4f4','#b89658']});if(i%4===0){boom(to[0],to[1],5);if(i%8===0)floatT(to[0],to[1]-8,'MOO!','#ffffff',true)}})}));
+ await Promise.all(ps);sfx('moo')}
+async function superWeapon(n,T){
+ if(!T||!T.alive)return;n.superUsed=true;const kind=pick(Object.keys(SUPERS)),[nm,tag]=SUPERS[kind];
+ log(`${n.nation} unleashes the ${nm} on ${T.nation}!`,'war');sfx('siren');$('#mapwrap').classList.add('alert');
+ await cutin([n.key],nm,tag,'purple');$('#mapwrap').classList.remove('alert');
+ await Promise.all([kind==='laser'?laserFx(T):kind==='robot'?robotFx(T):cowFx(n,T),say(n,sub(pick(SUPERLINES[kind]),T),'gloat')]);
+ const k=Math.min(T.pop,Math.round(T.pop*rnd(.15,.25))+5);T.pop-=k;if(G.tstats){G.tstats.hits++}
+ let extra='';if(kind==='robot'&&T.missiles>0){const m=Math.min(T.missiles,2);T.missiles-=m;extra=` and ${m} missile${m>1?'s':''} stomped`}if(kind==='cows'&&T.abm>0){T.abm=Math.max(0,T.abm-2);extra=' and their defenses covered in cows'}
+ floatT(T.pos[0],T.pos[1]-14,'-'+k+'M','#ff6a55',true);ouch(T);setRowState(T,'hit');T.hostility[n.key]=(T.hostility[n.key]||0)+6;log(`The ${nm} costs ${T.nation} ${k}M people${extra}.`,'hit');refresh();
+ if(T.pop<1)await eliminate(T);else await say(T,ln(T,'hit',n),'hit');
+}
+
+/* ---------- click-to-intercept ---------- */
+function updIncoming(){const on=!!(G.incoming&&G.incoming.length),el=$('#incoming');el.hidden=!on;$('#mapwrap').classList.toggle('incoming',on);if(on&&G.player){const a=G.player.abm;el.textContent=`INCOMING! CLICK THE MISSILES · ${a} DEFENSE${a===1?'':'S'} LEFT`}}
+async function incomingMissile(n,T,mt,path,draw){
+ const m={x:path.A[0],y:path.A[1],dead:false};G.incoming.push(m);updIncoming();sfx('alarm');
+ let t=0;const D=4.2;
+ await new Promise(res=>{ents.push(dt=>{if(m.dead||t>=1){res();return false}t=Math.min(1,t+dt/D);const [x,y]=at(path,t);m.x=x;m.y=y;draw(x,y,dirA(path,t));if(t>.06){const rr=7+Math.sin(clock*12);ring(x,y,rr,rr,'#ff3030');px(x-rr-2,y,'#ff3030');px(x+rr+2,y,'#ff3030');px(x,y-rr-2,'#ff3030');px(x,y+rr+2,'#ff3030')}return true})});
+ G.incoming=G.incoming.filter(o=>o!==m);updIncoming();
+ if(m.dead){floatT(m.x,m.y-8,'SHOT DOWN!','#a0f0ff',true);log(`You shoot down a ${mt}MT missile from ${n.nation}.`);return 'blocked'}
+ const to=path.B;applyHit(n,T,mt,to[0],to[1],'missile');await boom(to[0],to[1],mt,{noZoom:true});return 'hit';
+}
+mapC.addEventListener('pointerdown',e=>{
+ if(!G.incoming||!G.incoming.length||!G.player||!G.player.alive)return;e.preventDefault();
+ const r=mapC.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*MW,y=(e.clientY-r.top)/r.height*MH,p=G.player;
+ if(p.abm<=0){floatT(x,y,'NO DEFENSES LEFT!','#ff6a55');sfx('reject');return}
+ const tgt=G.incoming.filter(m=>!m.dead&&!m.locked).map(m=>[m,Math.hypot(m.x-x,m.y-y)]).filter(a=>a[1]<24).sort((a,b)=>a[1]-b[1])[0];
+ p.abm--;refresh();updIncoming();sfx('intercept');const sx=p.pos[0],sy=p.pos[1]-4;
+ if(tgt){const m=tgt[0];m.locked=true;let lx=sx,ly=sy;
+  anim(.32,q=>{const e=q*q;lx=sx+(m.x-sx)*e;ly=sy+(m.y-sy)*e;drawInterceptor(lx,ly,Math.atan2(m.y-ly,m.x-lx));part({x:lx,y:ly,life:.3,cols:['#a0f0ff','#40c0ff'],fade:true})}).then(()=>{m.dead=true;sfx('small');
+   for(let i=0;i<22;i++)part({x:m.x,y:m.y,vx:rnd(-30,30),vy:rnd(-30,20),g:30,life:rnd(.3,.9),cols:['#ffffff','#ffb040','#e05a20','#6a6a78']});const X=m.x,Y=m.y;anim(.45,q=>ring(X,Y,1+q*10,1+q*10,q<.5?'#ffffff':'#a0f0ff'))})}
+ else fly(arc([sx,sy],[x,y],.12),.28,1,(a,b,ang)=>{drawInterceptor(a,b,ang);part({x:a,y:b,life:.3,cols:['#a0f0ff','#40c0ff'],fade:true})}).then(()=>{anim(.35,q=>ring(x,y,1+q*6,1+q*6,'#a0f0ff'));floatT(x,y-6,'MISS','#ffffff')})});
+
+/* ---------- turn flow ---------- */
+const EVENTS=[
+ {w:2,ok:()=>byN('iran').alive,async go(){banner('OIL SHORTAGE',true);sfx('alarm');alive().forEach(n=>{n.oil=Math.max(0,n.oil-2);floatT(n.pos[0],n.pos[1]-14,'-2 OIL','#ff9a50')});refresh();await news('GREAT OIL SHORTAGE! Every nation loses 2 barrels. Farhad somehow finds 6 extra in his coat.');const f=byN('iran');await Promise.all([drillFx(f,6),say(f,'Shortage? What shortage? Grape juice, 40 dollars a barrel.','gloat')]);f.oil+=6}},
+ {w:1,ok:()=>true,async go(){alive().forEach(n=>floatT(n.pos[0],n.pos[1]-14,'TSK TSK','#ffffff'));await news('The United Nations sends a strongly worded letter. Nothing happens. Everyone feels slightly told off.')}},
+ {w:1,ok:()=>byN('europe').alive&&byN('europe')!==G.player,async go(){const e=byN('europe');e.skip=true;e.skipWhy='strike';floatT(e.pos[0],e.pos[1]-14,'ON STRIKE','#f4d34a');await news('Europe\'s sub-committees go on strike. Europe skips its next move.');await say(e,ln(e,'strike'))}},
+ {w:1,ok:()=>byN('nk').alive,async go(){const k=byN('nk');await news('It is National Missile Test Day. North Korea gains 2 missiles. State TV gives itself an award.');await Promise.all([buildFx(k,[{kind:'missile',label:'+1 MISSILE'},{kind:'missile',label:'+1 MISSILE'}]),say(k,'Two new missiles! Both scored 11 out of 10!','gloat')]);k.missiles+=2}},
+ {w:1,ok:()=>byN('china').alive,async go(){const c=byN('china');await news('The five-year plan finishes three years early. China gains a missile and a 50MT warhead.');await Promise.all([buildFx(c,[{kind:'missile',label:'+1 MISSILE'},{kind:'warhead',label:'+50MT'}]),say(c,'Ahead of schedule. Please adjust your feelings accordingly.','gloat')]);c.missiles++;c.warheads.push(50)}},
+ {w:1,ok:()=>byN('russia').alive,async go(){const r=byN('russia');await news('Samovarov holds a coronation rehearsal. The kettle whistles. A celebratory pipeline pumps 4 oil.');await Promise.all([drillFx(r,4),say(r,'Hold still, kettle. Is sacred moment.','gloat')]);r.oil+=4}},
+ {w:1,ok:()=>byN('america').alive,async go(){const a=byN('america');const src=pick(alive().filter(n=>n!==a&&n.pop>4));if(!src)return;await news('Courtroom reruns go viral. 3 million people move to America to be in the studio audience.');await Promise.all([walkers(src.pos,a.pos,10,src.color,a.color),say(a,'Welcome, new citizens! Clap when the sign lights up.','gloat')]);src.pop-=3;a.pop+=3}},
+ {w:1,ok:()=>byN('israel').alive,async go(){const i=byN('israel');await news('A startup releases an app that intercepts missiles. It is in beta. Israel gains 2 defenses.');await Promise.all([shieldFx(i,2),say(i,'It also orders falafel. We are still fixing that.','gloat')]);i.abm+=2}},
+ {w:1,ok:()=>true,async go(){alive().forEach(n=>{for(const k in n.hostility)n.hostility[k]=Math.max(0,n.hostility[k]-2);floatT(n.pos[0],n.pos[1]-14,'SCONES!','#ffd8a0')});await news('A global bake-off is declared. Leaders argue about scones for an hour. Grudges cool down everywhere.')}},
+ {w:1,ok:()=>true,async go(){alive().forEach(n=>{n.oil+=1;floatT(n.pos[0],n.pos[1]-14,'+1 OIL','#ffb040')});await news('A tanker runs aground on a rubber duck. Oil prices wobble. Everyone gains 1 barrel out of sheer confusion.')}},
+ {w:2,ok:()=>true,async go(){const t=alive().slice().sort((a,b)=>(b.hostility.__noise||0)-(a.hostility.__noise||0));await ufoRaid(pick(t.slice(0,3)))}},
+ {w:4,ok:()=>true,async go(){const c=alive().filter(n=>n.pop>8);if(c.length)await ufoAbduct(pick(c))}},
+ {w:2,ok:()=>true,async go(){await ufoAbduct(pick(alive()),true)}},
+ {w:2,ok:()=>G.allies.size>0,async go(){const k=pick([...G.allies]);const [a,b]=k.split('|').map(byN);if(!a||!b)return;breakAlly(a,b);refresh();await news(`The alliance between ${a.nation} and ${b.nation} collapses in an argument over who pays for lunch.`);await betrayFx(a,b);a.hostility[b.key]+=2;b.hostility[a.key]+=2;log(`${a.nation} and ${b.nation} split up over lunch.`,'pact')}}
+];
+function pickEvent(){const pool=EVENTS.filter(e=>e.ok());let s=pool.reduce((a,e)=>a+e.w,0)*R();for(const e of pool){s-=e.w;if(s<=0)return e}return pool[0]}
+async function startTurn(){
+ const gen=G.gen;
+ G.nations.forEach(n=>n.alive&&setRowState(n,'idle'));
+ G.order=null;G.pending=null;G.busy=true;refresh();
+ if(G.turn===1)await news(`PEACETIME. DEFCON 5. You have ${PEACE_TURNS} turns to build up, make friends, spread propaganda and send spies. Then the world war begins.`);
+ else if(G.turn<=PEACE_TURNS){banner('DEFCON '+(6-G.turn),true);sfx('alarm');await news(G.turn===PEACE_TURNS?'DEFCON 3. Last turn of peace. Everyone is smiling a bit too much. Get ready.':'DEFCON 4. Tensions rise. Somebody spilled tea on a treaty.')}
+ else if(G.turn===PEACE_TURNS+1&&!G.war){G.war=true;sfx('siren');$('#mapwrap').classList.add('alert');log('*** WORLD WAR *** DEFCON 1. Missiles unlocked.','war');await cutin(['__news'],'WORLD WAR','DEFCON 1. Missiles, bombers and the big red button are unlocked.','');$('#mapwrap').classList.remove('alert');await news('WORLD WAR! DEFCON 1. Every missile, bomber and big red button is now unlocked. Good luck, everyone. Mostly no one.')}
+ if(G.war&&G.turn>PEACE_TURNS+1&&G.turn%2===0)await newsBreak();
+ if(gen!==G.gen)return;
+ if(G.turn>1){if(R()<.4){const B=pick(alive().filter(o=>o!==G.player));if(B)await say(B,ln(B,'chat'))}if(R()<.5){const e=pickEvent();if(e){sfx('alarm');await e.go();refresh()}}}
+ if(gen!==G.gen)return;
+ const al=alive();
+ if(G.allies.size&&(al.length<=2||al.every(a=>al.every(b=>a===b||allied(a,b))))){G.allies=new Set();refresh();log('All alliances dissolve. There can be only one.','pact');await news('With nobody left to hate together, every alliance dissolves at once. There can be only one.')}
+ if(G.turn>=12){if(!G.armsRace){G.armsRace=true;banner('ARMS RACE',true);await news('ARMS RACE! The factories go into overdrive. Every nation gets a free missile and warhead every turn from now on.')}al.forEach(n=>{n.missiles++;n.warheads.push(pick([20,50]));floatT(n.pos[0],n.pos[1]-14,'+1 MISSILE','#f4d34a')});refresh()}
+ if(G.turn>=30){await cutin(['__alien'],'HOA FINES','The Galactic Homeowners Association is fining everyone. In people.','alien');await alien(aln('fine'));for(const n of alive()){const k=Math.max(2,Math.round(n.pop*.15));n.pop-=k;floatT(n.pos[0],n.pos[1]-12,'-'+k+'M FINED','#a8f070');sfx('laser')}refresh();for(const n of alive())if(n.pop<1)await eliminate(n)}
+ if(gen!==G.gen)return;
+ if(checkEnd())return;
+ if(!G.player.alive){G.busy=true;refresh();await sleep(300);if(gen===G.gen)resolveTurn();return}
+ G.busy=false;refresh();markTalk(G.player);
+ $('#dlgName').textContent=lbl(G.player);drawFace($('#dlgCv'),G.player.key,'idle',0);$('#dlgMore').hidden=true;
+ $('#dlgText').textContent='Your move. The world is waiting. Nervously.';
+}
+async function resolveTurn(){
+ const gen=G.gen;G.busy=true;refresh();
+ const acts=[];
+ for(const n of alive()){let a=n===G.player?G.order:aiChoose(n);if(n===G.player)n.skip=false;if(n.skip){a={type:'skip',why:n.skipWhy||'strike'};n.skip=false;n.skipWhy=null}else if(n.key==='israel'&&n!==G.player&&R()<.12)a={type:'skip',why:'coalition'};acts.push(Object.assign({n},a))}
+ const pri={skip:0,defend:0,build:1,drill:1,ally:1,propaganda:2,sabotage:2,missile:3,bomber:3,nuke:3,super:3};
+ shuffle(acts).sort((a,b)=>pri[a.type]-pri[b.type]);
+ for(const a of acts){if(gen!==G.gen)return;if(!a.n.alive)continue;await perform(a);if(gen!==G.gen)return;refresh();if(alive().length<=1)break}
+ if(gen!==G.gen)return;
+ if(alive().length>1)await upkeep();
+ if(gen!==G.gen)return;
+ refresh();if(checkEnd())return;
+ G.turn++;startTurn();
+}
+async function perform(a){
+ const n=a.n,T=a.target?byN(a.target):null;
+ switch(a.type){
+ case 'skip':log(`${n.nation} does nothing this turn.`);await say(n,a.why==='hacked'?pick(['My teleprompter only says "BANANA". I cannot govern like this.','The teleprompter is playing cat videos. Turn cancelled.']):pick(a.why==='coalition'?n.lines.skip:(n.lines.strike||['On strike.'])));return;
+ case 'defend':{const add=n.key==='israel'?3:2;log(`${n.nation} builds ${add} missile defenses.`);await Promise.all([shieldFx(n,add),say(n,ln(n,'defense'))]);n.abm+=add;return}
+ case 'build':{const items=[],draws=n.key==='china'?2:1;for(let i=0;i<draws;i++){const r=R(),mb=n.key==='nk'?.55:.38;if(r<mb){n.missiles++;items.push({kind:'missile',label:'+1 MISSILE'})}else if(r<mb+.42){const mt=pick([10,20,20,50,50,100]);n.warheads.push(mt);items.push({kind:'warhead',label:'+'+mt+'MT WARHEAD'})}else{n.bombers++;items.push({kind:'bomber',label:'+1 BOMBER'})}}
+  log(`${n.nation} builds ${items.map(i=>i.label.slice(1).toLowerCase().replace('mt','MT')).join(' and ')}.`);await Promise.all([buildFx(n,items),say(n,ln(n,'build'))]);return}
+ case 'drill':{const add={iran:5,russia:4}[n.key]||3;log(`${n.nation} drills ${add} barrels of oil.`);await Promise.all([drillFx(n,add),say(n,ln(n,'oil'))]);n.oil+=add;return}
+ case 'propaganda':{if(!T||!T.alive)return;const mult=(n.key==='russia'?1.5:1)*(G.war?.7:1);let steal=Math.max(1,Math.round(T.pop*rnd(.04,.08)*mult));steal=Math.min(steal,Math.max(0,T.pop-1));
+  await Promise.all([propFx(n,T,steal),say(n,ln(n,'propaganda',T),'gloat')]);
+  T.pop-=steal;n.pop+=steal;T.hostility[n.key]=(T.hostility[n.key]||0)+2;floatT(T.pos[0],T.pos[1]-8,'-'+steal+'M','#ff6a55');floatT(n.pos[0],n.pos[1]-8,'+'+steal+'M','#3ee07a');log(`${n.nation}'s propaganda lures ${steal}M people away from ${T.nation}.`);return}
+ case 'ally':await proposeAlly(n,T);return;
+ case 'sabotage':await sabotage(n,T);return;
+ case 'super':await superWeapon(n,T);return;
+ case 'missile':case 'bomber':case 'nuke':n.hostility.__noise=(n.hostility.__noise||0)+1;await attack(n,T,a.type);return;
+ }
+}
+async function upkeep(){
+ for(const n of alive()){n.oil-=1;if(n.oil<0){n.oil=0;const loss=Math.max(1,Math.round(n.pop*.04));n.pop-=loss;floatT(n.pos[0],n.pos[1]-10,'FUEL RIOTS','#ff9a50');log(`${n.nation} runs out of oil. Fuel riots cost ${loss}M people.`,'hit')}}
+ if(G.mt>=300){if(!G.winter){G.winter=true;banner('NUCLEAR WINTER',true);log('*** NUCLEAR WINTER *** Everyone loses 3% of their people each turn. Scarves are sold out.','war');refresh();await news('NUCLEAR WINTER. The sky is grey, the scarves are sold out, and every nation now shrinks 3% per turn.')}
+  for(const n of alive())n.pop-=Math.max(1,Math.round(n.pop*.03))}
+ for(const n of alive())if(n.pop<1)await eliminate(n);
+ G.craters=G.craters.filter(c=>--c.t>0);
+ if(alive().length>1&&R()<.22){const c=alive().filter(n=>n.pop>6);if(c.length)await ufoAbduct(pick(c),R()<.3)}
+}
+function checkEnd(){
+ if(!G.nations)return true;const al=alive();
+ if(al.length<=1){endScreen(al[0]||null);return true}
+ return false;
+}
+const EPI=['Most survivors are accountants who were in a bunker doing taxes.','Also surviving: one extremely confused goat.','The victory parade is three people and a tuba.','Property prices have never been lower.','The cockroaches have sent a congratulations card. It is unsigned.','The Galactic Homeowners Association has issued a fine.'];
+const ORD=['1st','2nd','3rd','4th','5th','6th','7th'];
+function endScreen(w){
+ G.busy=true;show('#scrEnd');const p=G.player,cv=$('#endCv');
+ const place=p.alive?1:7-G.deadOrder.indexOf(p.key);
+ const st=`Turns: ${G.turn} · Megatons detonated: ${G.mt} · You finished ${ORD[place-1]} of 7`;
+ if(w&&w===p){sfx('win');drawFace(cv,w.key,'gloat',0);$('#endHead').textContent='VICTORY*';$('#endFine').textContent='*TERMS AND CONDITIONS APPLY';
+  $('#endText').textContent=`${w.leader} now rules ${w.pop}M survivors. ${pick(EPI)}`;$('#endQuote').textContent='"'+ln(w,'win')+'"'}
+ else if(w){sfx('lose');drawFace(cv,w.key,'gloat',0);$('#endHead').textContent=w.nation.toUpperCase()+' WINS';$('#endFine').textContent='LAST NATION STANDING';
+  $('#endText').textContent=`${w.leader} rules over ${w.pop}M survivors. ${pick(EPI)}`;$('#endQuote').textContent='"'+ln(w,'win')+'"'}
+ else{const L=G.lastDead||p;sfx('lose');drawFace(cv,L.key,'hit',0);$('#endHead').textContent='EVERYONE LOSES';$('#endFine').textContent=`${L.nation.toUpperCase()} TECHNICALLY DIED LAST`;
+  $('#endText').textContent='The cockroaches have formed a government. It is going surprisingly well.';$('#endQuote').textContent='"'+ln(L,'lose')+'"'}
+ $('#endStats').textContent=st;
+}
+
+/* ---------- toolbar, mod kit ---------- */
+function toTitle(){G.gen++;G.craters=[];if(advanceFn)advanceFn();if(askRes){askRes(-1);askRes=null}G.nations=null;G.war=false;G.winter=false;G.allies=new Set();resetFx();buildBase();show('#scrTitle');buildCast()}
+$('#btnStart').onclick=()=>{ac();musStart();sfx('siren');initGame(chosen)};
+$('#btnAgain').onclick=toTitle;
+$('#btnQuit').onclick=toTitle;
+function toggle(btn,on,name){btn.textContent=name+': '+(on?'on':'off');btn.classList.toggle('on',on);btn.setAttribute('aria-pressed',on)}
+$('#btnFast').onclick=e=>{G.fast=!G.fast;toggle(e.currentTarget,G.fast,'Fast')};
+$('#btnSound').onclick=e=>{AU.sound=!AU.sound;toggle(e.currentTarget,AU.sound,'Sound');sfx('click')};
+$('#btnMusic').onclick=e=>{AU.music=!AU.music;toggle(e.currentTarget,AU.music,'Music');if(AU.music)musStart();else musStop()};
+function clearCache(key){for(const k in pcache)if(k.startsWith(key+'|'))delete pcache[k]}
+function repaintAll(){buildCast();if(G.nations){G.nations.forEach(n=>drawFace(n.$cv,n.key,n.rs||'idle',0));refresh()}buildMod()}
+function buildMod(){
+ const box=$('#modRows');box.innerHTML='';
+ LEADERS.forEach(L=>{const r=document.createElement('div');r.className='modrow';
+  r.innerHTML=`<div class="win" style="border-width:2px;border-radius:8px"><canvas class="px" width="72" height="72"></canvas></div>
+  <label><span class="sr">Leader name</span><input type="text" id="mod-l-${L.key}" value="${esc(L.leader)}"></label>
+  <label><span class="sr">Nation name</span><input type="text" id="mod-n-${L.key}" value="${esc(L.nation)}"></label>
+  <div class="fbtn"><span class="btn filelbl">Portrait<input type="file" accept="image/*" id="mod-f-${L.key}" aria-label="Load portrait for ${esc(L.leader)}"></span><button class="btn" type="button">Reset</button></div>`;
+  drawFace(r.querySelector('canvas'),L.key,'idle',0);
+  const sync=()=>{if(G.nations){const n=byN(L.key);n.leader=L.leader;n.nation=L.nation}refresh();buildCast()};
+  r.querySelector('#mod-l-'+L.key).oninput=e=>{L.leader=e.target.value||'Nameless Leader';sync()};
+  r.querySelector('#mod-n-'+L.key).oninput=e=>{L.nation=e.target.value||'Nowhere';sync()};
+  r.querySelector('#mod-f-'+L.key).onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{L.custom=im;L.customV=(L.customV||0)+1;clearCache(L.key);repaintAll()};im.src=fr.result};fr.readAsDataURL(f)};
+  r.querySelector('button').onclick=()=>{L.custom=null;L.customV=(L.customV||0)+1;clearCache(L.key);repaintAll()};
+  box.appendChild(r)});
+}
+$('#btnCrt').onclick=e=>{const on=!document.body.classList.contains('crt');document.body.classList.toggle('crt',on);$('#crt').hidden=!on;toggle(e.currentTarget,on,'CRT')};
+$('#tkText').addEventListener('animationiteration',updTicker);
+$('#btnMod').onclick=()=>{buildMod();$('#modal').hidden=false};
+$('#btnModDone').onclick=()=>{$('#modal').hidden=true};
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').hidden=true});
+
+/* ---------- boot ---------- */
+buildBase();buildCast();drawFace($('#dlgCv'),'__news','idle',0);requestAnimationFrame(frame);
+</script>
+
+</body></html>
